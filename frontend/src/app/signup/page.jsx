@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import API from "@/lib/api";
 
 const STREAMS = {
   "School": ["Class 7", "Class 8", "Class 9", "Class 10"],
@@ -25,7 +26,7 @@ export default function Signup() {
     if (!agreed) { setError("Please agree to the terms to continue."); return; }
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch(`${API}/api/auth/register`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: `${form.firstName} ${form.lastName}`.trim(), email: form.email, password: form.password, phone: form.phone, stream: form.stream, className: form.className, address: form.address }),
       });

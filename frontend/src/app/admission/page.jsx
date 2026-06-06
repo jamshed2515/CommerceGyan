@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import API from "@/lib/api";
 
 const STREAMS = {
   "School": ["Class 7", "Class 8", "Class 9", "Class 10"],
@@ -21,7 +22,7 @@ export default function Admission() {
     if (!form.stream || !form.className) { setError("Please select stream and class."); return; }
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/enquiry", {
+      const res = await fetch(`${API}/api/enquiry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

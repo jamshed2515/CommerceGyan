@@ -14,8 +14,7 @@ import {
   Field,
   FormModal,
 } from "./AdminUI";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 
 const statusCls = { 
   Paid: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30", 

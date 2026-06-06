@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 const inp = "w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-[#1A3B70] outline-none text-sm bg-gray-50";
 const NAV = [
   { id: "overview", icon: "🏠", label: "Dashboard" },

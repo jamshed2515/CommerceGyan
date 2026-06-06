@@ -7,8 +7,7 @@ import {
   PageHeader,
   card,
 } from "./AdminUI";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 
 export default function PaymentsTab({ token, flash }) {
   const [payments, setPayments] = useState([]);

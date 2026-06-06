@@ -15,8 +15,7 @@ import {
   Dropdown,
   DropdownItem,
 } from "./AdminUI";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 const BLANK = { name: "", email: "", password: "", phone: "", subject: "" };
 
 export default function TeachersTab({ teachers, batches = [], schedules = [], token, onRefresh, flash }) {

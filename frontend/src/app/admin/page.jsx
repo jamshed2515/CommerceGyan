@@ -58,8 +58,7 @@ import {
   FormModal,
   PageHeader,
 } from "@/components/admin/AdminUI";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 
 const SECTIONS = [
   {

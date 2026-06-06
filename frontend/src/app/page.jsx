@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WhatsAppButton from "../components/WhatsAppButton";
+import API from "@/lib/api";
 
 export default function Home() {
   const [activeCourseTab, setActiveCourseTab] = useState("School");
@@ -13,15 +14,15 @@ export default function Home() {
   const [dbAchievers, setDbAchievers] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/announcements")
+    fetch(`${API}/api/announcements`)
       .then(r => r.json()).then(d => setAnnouncements(Array.isArray(d) ? d.slice(0, 5) : []))
       .catch(() => {});
 
-    fetch("http://localhost:5000/api/courses")
+    fetch(`${API}/api/courses`)
       .then(r => r.json()).then(d => setDbCourses(Array.isArray(d) ? d : []))
       .catch(() => {});
 
-    fetch("http://localhost:5000/api/achievers")
+    fetch(`${API}/api/achievers`)
       .then(r => r.json()).then(d => setDbAchievers(Array.isArray(d) ? d : []))
       .catch(() => {});
   }, []);

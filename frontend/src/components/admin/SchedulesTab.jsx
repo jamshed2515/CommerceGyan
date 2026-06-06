@@ -14,8 +14,7 @@ import {
   DropdownItem,
   PageHeader,
 } from "./AdminUI";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 
 const SUBJECT_COLORS = {
   maths: { bg: "bg-indigo-50/70 border-indigo-100/50", text: "text-indigo-700 dark:text-indigo-400", dot: "bg-indigo-500" },

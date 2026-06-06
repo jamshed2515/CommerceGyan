@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-const API = "http://localhost:5000";
+import API from "@/lib/api";
 const NAV = [
   { id: "overview", icon: "🏠", label: "Dashboard" },
   { id: "courses", icon: "📚", label: "My Courses" },
