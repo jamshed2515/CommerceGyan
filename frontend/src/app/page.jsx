@@ -814,36 +814,70 @@ export default function Home() {
       </section>
 
       {/* Gallery Section */}
-      <section className="py-24 bg-white border-t border-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="py-24 bg-white border-t border-gray-50 relative overflow-hidden">
+        {/* Subtle backdrop glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00AEEF]/3 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-            <div className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider">
-              Life at Institute
+            <div className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-wider animate-pulse-soft">
+              📸 REAL CLASSROOM MOMENTS
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-[#1A3B70]">Our Learning Environment</h2>
-            <p className="text-gray-550 text-sm font-medium">Take a virtual tour of our classroom infrastructure, counseling desks, and award felicitations.</p>
+            <h2 className="text-3xl md:text-5xl font-black text-[#1A3B70]">Life at Commerce Gyan</h2>
+            <p className="text-gray-550 text-sm md:text-base font-medium">Take a glimpse into our classroom activities, student celebrations, mentoring sessions, and memorable achievements.</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { title: "Interactive Classrooms", desc: "Equipped with digital teaching aids", img: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" },
-              { title: "Doubt Clearing Desks", desc: "1-on-1 personalized mentorship", img: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" },
-              { title: "Topper Felicitations", desc: "Celebrating success every year", img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" },
-              { title: "Full Library Support", desc: "Extensive collections of reference materials", img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" }
+              {
+                title: "Student Celebrations",
+                desc: "Celebrating achievements and special occasions together.",
+                img: "/learningEnvironment/image1.jpeg"
+              },
+              {
+                title: "Academic Community",
+                desc: "Building confidence through mentorship and teamwork.",
+                img: "/learningEnvironment/image2.jpeg"
+              },
+              {
+                title: "Student Recognition",
+                desc: "Encouraging excellence through appreciation and rewards.",
+                img: "/learningEnvironment/image3.jpeg"
+              },
+              {
+                title: "Interactive Learning",
+                desc: "Friendly learning environment with personal guidance.",
+                img: "/learningEnvironment/image4.jpeg"
+              }
             ].map((g, i) => (
-              <div key={i} className="group relative rounded-2xl overflow-hidden aspect-[4/3] shadow-md border-2 border-white hover:shadow-xl transition-all duration-300">
-                <img src={g.img} alt={g.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <h4 className="font-extrabold text-sm">{g.title}</h4>
-                  <p className="text-[10px] text-white/70 font-medium mt-0.5">{g.desc}</p>
+              <div key={i} className="group relative rounded-2xl overflow-hidden h-[280px] shadow-lg border border-gray-100 hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-end bg-slate-900">
+                {/* Image background with explicit layout size to prevent CLS */}
+                <img 
+                  src={g.img} 
+                  alt={g.title} 
+                  width={400}
+                  height={280}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" 
+                  onError={(e) => {
+                    // Fail-safe fallback to image1 if image4 or any other image is missing
+                    e.target.src = '/learningEnvironment/image1.jpeg';
+                  }}
+                />
+                
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/5 z-10 transition-opacity duration-300"></div>
+                
+                {/* Text Content */}
+                <div className="p-5 relative z-20 text-white space-y-1.5">
+                  <h4 className="font-extrabold text-base tracking-tight leading-tight">{g.title}</h4>
+                  <p className="text-[11px] text-white/80 font-medium leading-snug">{g.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </section>
-
       {/* FAQ Section */}
       <section className="py-24 bg-slate-50">
         <div className="max-w-4xl mx-auto px-6">
