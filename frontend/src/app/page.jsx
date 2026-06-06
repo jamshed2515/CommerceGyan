@@ -403,7 +403,16 @@ export default function Home() {
             </div>
 
             {/* Floating Card 1: Top Performing Students (Evergreen achievement card, 10-15% reduced on desktop, compact on mobile) */}
-            <div className="absolute bottom-4 left-2 lg:bottom-10 lg:-left-8 flex items-center gap-2.5 lg:gap-3 bg-white/90 backdrop-blur-md rounded-[14px] lg:rounded-2xl border border-white/50 shadow-lg animate-float z-30 w-[190px] h-[52px] lg:w-[240px] lg:h-[68px] px-2.5 lg:px-4 py-2 lg:py-3.5">
+            <div 
+              className="absolute bottom-4 left-2 lg:bottom-10 lg:-left-8 flex items-center gap-2.5 lg:gap-3 rounded-[16px] lg:rounded-[20px] animate-float z-30 w-[190px] h-[52px] lg:w-[240px] lg:h-[68px] px-2.5 lg:px-4 py-2 lg:py-3.5"
+              style={{
+                background: 'rgba(255, 255, 255, 0.75)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)'
+              }}
+            >
               <div className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-blue-100 flex items-center justify-center text-sm lg:text-lg shadow-inner">🏆</div>
               <div>
                 <h4 className="font-extrabold text-[#1A3B70] text-[11px] lg:text-[12.5px] leading-tight">Top Performing Students</h4>
@@ -412,7 +421,16 @@ export default function Home() {
             </div>
 
             {/* Floating Card 2: CA Foundation Prep (10-15% reduced on desktop, compact on mobile) */}
-            <div className="absolute top-4 right-2 lg:top-12 lg:-right-4 flex items-center gap-2.5 lg:gap-3 bg-white/90 backdrop-blur-md rounded-[14px] lg:rounded-2xl border border-white/50 shadow-lg animate-float z-30 [animation-delay:2s] w-[190px] h-[52px] lg:w-[230px] lg:h-[64px] px-2.5 lg:px-3.5 py-2 lg:py-3">
+            <div 
+              className="absolute top-4 right-2 lg:top-12 lg:-right-4 flex items-center gap-2.5 lg:gap-3 rounded-[16px] lg:rounded-[20px] animate-float z-30 [animation-delay:2s] w-[190px] h-[52px] lg:w-[230px] lg:h-[64px] px-2.5 lg:px-3.5 py-2 lg:py-3"
+              style={{
+                background: 'rgba(255, 255, 255, 0.75)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)'
+              }}
+            >
               <div className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-amber-100 flex items-center justify-center text-sm lg:text-lg">🔥</div>
               <div>
                 <h4 className="font-extrabold text-[#1A3B70] text-[11px] lg:text-[12.5px] leading-tight">CA Foundation Prep</h4>

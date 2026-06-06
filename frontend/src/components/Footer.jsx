@@ -14,17 +14,17 @@ export default function Footer() {
   if (isDashboard) return null;
 
   return (
-    <footer className="bg-white border-t border-slate-200/80 font-sans mt-auto">
+    <footer className="border-t border-slate-200/60 font-sans mt-auto" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)' }}>
       {/* Top Footer Section: Multi-column Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
+      <div className="max-w-7xl mx-auto px-6 py-16 lg:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Column 1: Institute Info (lg:col-span-4) */}
-          <div className="lg:col-span-4 space-y-5">
+          <div className="lg:col-span-4 space-y-6">
             <Link href="/" className="inline-block">
               <img
                 src="/logo.png"
                 alt="Commerce Gyan Logo"
-                className="max-h-[44px] w-auto transition-all duration-300"
+                className="max-h-[58px] w-auto transition-all duration-300"
               />
             </Link>
             <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-sm">
@@ -76,7 +76,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={`Follow on ${social.label}`}
-                  className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200/60 text-slate-500 hover:text-[#00AEEF] hover:bg-[#EAF8FF] hover:border-[#00AEEF]/20 flex items-center justify-center transition-all active:scale-95 duration-200"
+                  className="w-11 h-11 rounded-full bg-white border border-slate-200/80 text-slate-500 hover:text-[#00AEEF] hover:border-[#00AEEF]/30 shadow-sm hover:shadow-md hover:-translate-y-1 flex items-center justify-center transition-all duration-300 cursor-pointer"
                 >
                   {social.icon}
                 </a>
@@ -85,8 +85,8 @@ export default function Footer() {
           </div>
 
           {/* Column 2: Quick Links (lg:col-span-2) */}
-          <div className="lg:col-span-2 space-y-4">
-            <h4 className="font-extrabold text-[#1A3B70] text-[13px] tracking-wider uppercase">
+          <div className="lg:col-span-2 space-y-5">
+            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
               Quick Links
             </h4>
             <ul className="space-y-2.5">
@@ -111,8 +111,8 @@ export default function Footer() {
           </div>
 
           {/* Column 3: Programs (lg:col-span-3) */}
-          <div className="lg:col-span-3 space-y-4">
-            <h4 className="font-extrabold text-[#1A3B70] text-[13px] tracking-wider uppercase">
+          <div className="lg:col-span-3 space-y-5">
+            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
               Programs
             </h4>
             <ul className="space-y-2.5">
@@ -136,8 +136,8 @@ export default function Footer() {
           </div>
 
           {/* Column 4: Contact Info (lg:col-span-3) */}
-          <div className="lg:col-span-3 space-y-4">
-            <h4 className="font-extrabold text-[#1A3B70] text-[13px] tracking-wider uppercase">
+          <div className="lg:col-span-3 space-y-5">
+            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
               Contact Us
             </h4>
             <ul className="space-y-3.5 text-xs text-gray-500 font-medium leading-relaxed">
