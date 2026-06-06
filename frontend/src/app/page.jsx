@@ -296,7 +296,7 @@ export default function Home() {
       </nav>
 
       {/* Redesigned Hero Section - Split Layout */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50/30 pt-10 pb-16 md:py-20">
+      <section className="relative w-full overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50/30 pt-8 pb-12 md:py-20">
         {/* Decorative background blobs */}
         <div className="absolute top-20 right-[-100px] w-[350px] h-[350px] rounded-full bg-[#00AEEF]/5 blur-[80px] -z-10 pointer-events-none"></div>
         <div className="absolute bottom-10 left-[-100px] w-[300px] h-[300px] rounded-full bg-blue-400/5 blur-[70px] -z-10 pointer-events-none"></div>
@@ -312,7 +312,7 @@ export default function Home() {
 
             {/* Main Title */}
             <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black text-[#1A3B70] leading-[1.1] tracking-tight">
-              Shaping Commerce <br className="hidden md:inline" />
+              Shaping Future <br className="hidden md:inline" />
               Leaders of <span className="bg-gradient-to-r from-[#00AEEF] to-[#1A3B70] bg-clip-text text-transparent">Tomorrow</span>
             </h1>
 
@@ -367,10 +367,10 @@ export default function Home() {
                     {/* Shadow overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
                     
-                    {/* Slide Caption (Visual indicator overlay) */}
-                    <div className="absolute bottom-6 left-6 right-6 text-white space-y-1">
-                      <p className="text-[#FFCC00] text-xs font-extrabold uppercase tracking-widest">{slide.subtitle}</p>
-                      <h3 className="text-xl font-bold leading-tight">{slide.title} {slide.highlight}</h3>
+                    {/* Slide Caption (Visual indicator overlay) - Right Aligned on Mobile to prevent card overlaps */}
+                    <div className="absolute bottom-4 right-4 left-auto md:left-6 md:right-6 flex flex-col items-end md:items-start text-right md:text-left space-y-0.5 md:space-y-1 z-10">
+                      <p className="text-[#FFCC00] text-[10px] md:text-xs font-extrabold uppercase tracking-widest">{slide.subtitle}</p>
+                      <h3 className="text-sm md:text-xl font-bold leading-tight text-white">{slide.title} {slide.highlight}</h3>
                     </div>
                   </div>
                 ))}
@@ -390,8 +390,8 @@ export default function Home() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>
               </button>
 
-              {/* Slide Dots */}
-              <div className="absolute bottom-6 right-6 flex gap-1.5 z-20">
+              {/* Slide Dots - Positioned Top-Left on Mobile to avoid overlapping cards & captions */}
+              <div className="absolute top-4 left-4 md:bottom-6 md:right-6 md:top-auto md:left-auto flex gap-1.5 z-20">
                 {heroSlides.map((_, idx) => (
                   <button 
                     key={idx} 
@@ -402,21 +402,21 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Floating Card 1: Star Student */}
-            <div className="absolute bottom-10 left-[-20px] lg:left-[-40px] flex items-center gap-3 bg-white/90 backdrop-blur-md p-3.5 rounded-2xl border border-white/50 shadow-xl animate-float z-30">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl shadow-inner">⭐</div>
+            {/* Floating Card 1: Top Performing Students (Evergreen achievement card, 10-15% reduced on desktop, compact on mobile) */}
+            <div className="absolute bottom-4 left-2 lg:bottom-10 lg:-left-8 flex items-center gap-2.5 lg:gap-3 bg-white/90 backdrop-blur-md rounded-[14px] lg:rounded-2xl border border-white/50 shadow-lg animate-float z-30 w-[190px] h-[52px] lg:w-[240px] lg:h-[68px] px-2.5 lg:px-4 py-2 lg:py-3.5">
+              <div className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-blue-100 flex items-center justify-center text-sm lg:text-lg shadow-inner">🏆</div>
               <div>
-                <h4 className="font-extrabold text-[#1A3B70] text-xs">District 1st Topper</h4>
-                <p className="text-[10px] text-gray-505 font-medium">Pariniti — 91.2% boards</p>
+                <h4 className="font-extrabold text-[#1A3B70] text-[11px] lg:text-[12.5px] leading-tight">Top Performing Students</h4>
+                <p className="text-[9px] lg:text-[10.5px] text-gray-500 font-medium leading-tight mt-0.5">Consistent Academic Excellence</p>
               </div>
             </div>
 
-            {/* Floating Card 2: CA Foundation Pass Rate */}
-            <div className="absolute top-12 right-[-10px] lg:right-[-20px] flex items-center gap-3 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-white/50 shadow-xl animate-float z-30 [animation-delay:2s]">
-              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-lg">🔥</div>
+            {/* Floating Card 2: CA Foundation Prep (10-15% reduced on desktop, compact on mobile) */}
+            <div className="absolute top-4 right-2 lg:top-12 lg:-right-4 flex items-center gap-2.5 lg:gap-3 bg-white/90 backdrop-blur-md rounded-[14px] lg:rounded-2xl border border-white/50 shadow-lg animate-float z-30 [animation-delay:2s] w-[190px] h-[52px] lg:w-[230px] lg:h-[64px] px-2.5 lg:px-3.5 py-2 lg:py-3">
+              <div className="w-7 h-7 lg:w-9 lg:h-9 rounded-full bg-amber-100 flex items-center justify-center text-sm lg:text-lg">🔥</div>
               <div>
-                <h4 className="font-extrabold text-[#1A3B70] text-[11px] leading-tight">CA Foundation Prep</h4>
-                <p className="text-[10px] text-gray-505 font-medium font-medium">New Batches Open</p>
+                <h4 className="font-extrabold text-[#1A3B70] text-[11px] lg:text-[12.5px] leading-tight">CA Foundation Prep</h4>
+                <p className="text-[9px] lg:text-[10.5px] text-gray-500 font-medium leading-tight mt-0.5">New Batches Open</p>
               </div>
             </div>
           </div>

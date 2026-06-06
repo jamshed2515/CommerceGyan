@@ -1,6 +1,7 @@
 import { Inter, Mulish } from "next/font/google";
 import "./globals.css";
 import MobileBottomNav from "../components/MobileBottomNav";
+import Footer from "../components/Footer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
     >
       <body className="font-sans min-h-full flex flex-col">
         <div className="flex-1 pb-16 lg:pb-0">{children}</div>
+        <Footer />
         <MobileBottomNav />
       </body>
     </html>
