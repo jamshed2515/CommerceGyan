@@ -102,11 +102,11 @@ export default function Home() {
   }, [dbCourses]);
 
   const defaultAchievers = [
-    { name: 'Pariniti', score: '91.2%' },
-    { name: 'Kishore', score: '89.8%' },
-    { name: 'Rinki', score: '89%' },
-    { name: 'Subhadra', score: '87.4%' },
-    { name: 'Uday', score: '85.4%' }
+    { name: 'Pariniti', score: '91.2%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/pariniti.png' },
+    { name: 'Kishore', score: '89.8%', course: 'CA Foundation', year: '2025', imageUrl: '/achievers/kishore.png' },
+    { name: 'Rinki', score: '89%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/rinki.png' },
+    { name: 'Subhadra', score: '87.4%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/subhadra.png' },
+    { name: 'Uday', score: '85.4%', course: 'Class 10 Boards', year: '2025', imageUrl: '/achievers/uday.png' }
   ];
 
   const displayAchievers = dbAchievers.length > 0 ? dbAchievers : defaultAchievers;
@@ -703,35 +703,50 @@ export default function Home() {
             <p className="text-white/60 text-sm font-medium">We celebrate the hard work and academic brilliance of our students who consistently top district and board examinations.</p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
             {displayAchievers.map((achiever, idx) => {
               const scoreNum = parseFloat(achiever.score);
               const isTopper = !isNaN(scoreNum) && scoreNum >= 90;
+              const studentImg = achiever.imageUrl || (achiever.name ? `/achievers/${achiever.name.toLowerCase()}.png` : '/logo.png');
               return (
-                <div key={idx} className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 w-52 text-center shadow-xl hover:-translate-y-2 hover:bg-white/10 hover:border-[#00AEEF]/40 transition-all duration-300 relative group">
+                <div key={idx} className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4 md:p-6 text-center shadow-xl hover:-translate-y-1.5 hover:bg-white/10 hover:border-[#00AEEF]/40 transition-all duration-300 relative group flex flex-col justify-between h-full w-full">
                   {isTopper && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#FFCC00] text-[#1A3B70] text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFCC00] text-[#1A3B70] text-[8px] md:text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md whitespace-nowrap z-10">
                       👑 TOPPER
                     </div>
                   )}
 
-                  <div className="w-24 h-24 mx-auto bg-white/10 rounded-full border-2 border-white/20 overflow-hidden flex items-center justify-center mb-4 relative shadow-inner">
-                    {achiever.imageUrl ? (
-                      <img src={achiever.imageUrl} alt={achiever.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-[#E6F4FE] text-[#1A3B70] flex items-center justify-center text-3xl font-black">
+                  <div>
+                    {/* Centered Image with explicit dimensions to prevent Layout Shift */}
+                    <div className="w-16 h-16 md:w-24 md:h-24 mx-auto rounded-full border-2 border-white/20 overflow-hidden flex items-center justify-center mb-3 md:mb-4 relative shadow-inner bg-white/10">
+                      <img 
+                        src={studentImg} 
+                        alt={achiever.name} 
+                        width={96}
+                        height={96}
+                        loading="lazy"
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const initialsDiv = e.target.nextSibling;
+                          if (initialsDiv) {
+                            initialsDiv.style.setProperty('display', 'flex', 'important');
+                          }
+                        }}
+                      />
+                      <div className="hidden absolute inset-0 w-full h-full bg-[#E6F4FE] text-[#1A3B70] flex items-center justify-center text-xl md:text-3xl font-black">
                         {achiever.name ? achiever.name.charAt(0).toUpperCase() : 'S'}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <h3 className="font-extrabold text-white text-base group-hover:text-[#00AEEF] transition-colors">{achiever.name}</h3>
-                  <p className="text-[#00AEEF] text-xs font-bold uppercase mt-0.5 tracking-wider">{achiever.course || "Commerce Boards"}</p>
+                    <h3 className="font-extrabold text-white text-sm md:text-base group-hover:text-[#00AEEF] transition-colors line-clamp-1">{achiever.name}</h3>
+                    <p className="text-[#00AEEF] text-[9px] md:text-xs font-bold uppercase mt-0.5 tracking-wider line-clamp-1">{achiever.course || achiever.stream || "Commerce Boards"}</p>
+                  </div>
                   
-                  <div className="mt-4 pt-3 border-t border-white/5">
-                    <span className="text-2xl font-black text-[#FFCC00] tracking-tight">{achiever.score}</span>
+                  <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t border-white/5">
+                    <span className="text-xl md:text-2xl font-black text-[#FFCC00] tracking-tight">{achiever.score}</span>
                     {achiever.year && (
-                      <span className="block text-[9px] text-white/40 font-bold mt-1 uppercase">Class of {achiever.year}</span>
+                      <span className="block text-[8px] md:text-[9px] text-white/40 font-bold mt-0.5 uppercase">Class of {achiever.year}</span>
                     )}
                   </div>
                 </div>
