@@ -11,6 +11,7 @@ export default function Home() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [announcements, setAnnouncements] = useState([]);
   const [dbCourses, setDbCourses] = useState([]);
   const [dbAchievers, setDbAchievers] = useState([]);
@@ -112,7 +113,7 @@ export default function Home() {
   const displayAchievers = dbAchievers.length > 0 ? dbAchievers : defaultAchievers;
 
   return (
-    <main className="min-h-screen bg-white text-[var(--color-text)] font-[family-name:var(--font-mulish)]">
+    <main className="min-h-screen bg-white text-[var(--color-text)] font-[family-name:var(--font-mulish)] overflow-x-hidden">
 
       {/* Announcements Ticker */}
       {announcements.length > 0 && (
@@ -135,7 +136,7 @@ export default function Home() {
       )}
       
       {/* Top Navbar with Glassmorphism */}
-      <nav className="sticky top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)] flex items-center justify-between px-6 h-[80px]">
+      <nav className="sticky top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)] flex items-center justify-between px-6 h-[70px] lg:h-[80px]">
         {/* Left Logo */}
         <div className="flex items-center flex-shrink-0">
           <Link href="/" className="flex items-center group">
@@ -221,7 +222,7 @@ export default function Home() {
 
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
-          <div className="absolute top-[80px] left-0 w-full bg-white border-b border-gray-200 shadow-lg z-40 flex flex-col p-6 gap-4 lg:hidden animate-slide-down">
+          <div className="absolute top-[70px] lg:top-[80px] left-0 w-full bg-white border-b border-gray-200 shadow-lg z-40 flex flex-col p-6 gap-4 lg:hidden animate-slide-down">
             <Link 
               href="#programs" 
               onClick={() => setIsMobileMenuOpen(false)}
@@ -293,7 +294,7 @@ export default function Home() {
             </div>
 
             {/* Main Title */}
-            <h1 className="text-4xl md:text-6xl font-black text-[#1A3B70] leading-[1.1] tracking-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black text-[#1A3B70] leading-[1.1] tracking-tight">
               Shaping Commerce <br className="hidden md:inline" />
               Leaders of <span className="bg-gradient-to-r from-[#00AEEF] to-[#1A3B70] bg-clip-text text-transparent">Tomorrow</span>
             </h1>
@@ -428,7 +429,7 @@ export default function Home() {
       </section>
 
       {/* Select your goal Section */}
-      <section className="py-20 bg-gradient-to-b from-white to-[#F4F9FF]">
+      <section className="py-10 lg:py-20 bg-gradient-to-b from-white to-[#F4F9FF]">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <div className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-4 py-1.5 rounded-full font-extrabold text-xs uppercase tracking-wider mb-3">
             Our Offerings
@@ -481,7 +482,7 @@ export default function Home() {
       </section>
 
       {/* Redesigned Mentor Section */}
-      <section className="bg-gradient-to-r from-[#1A3B70] to-[#122A50] py-20 text-white overflow-hidden relative border-t border-white/5">
+      <section className="bg-gradient-to-r from-[#1A3B70] to-[#122A50] py-10 lg:py-20 text-white overflow-hidden relative border-t border-white/5">
         {/* Subtle backdrop shapes */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#00AEEF]/10 rounded-full blur-3xl pointer-events-none"></div>
         
@@ -566,7 +567,7 @@ export default function Home() {
       </section>
       
       {/* Detailed Course Grid Section */}
-      <section id="programs" className="py-24 bg-white">
+      <section id="programs" className="py-12 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
             <div className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider">
@@ -595,10 +596,10 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayCourses[activeCourseTab].map((course, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,174,239,0.1)] hover:border-[#00AEEF]/50 transition-all duration-300 border border-gray-100 flex flex-col h-full justify-between group">
+              <div key={idx} className="bg-white rounded-2xl p-4 lg:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,174,239,0.1)] hover:border-[#00AEEF]/50 transition-all duration-300 border border-gray-100 flex flex-col h-full justify-between group">
                  <div>
                    {/* Top Header Card Info */}
-                   <div className="flex items-start justify-between mb-4">
+                   <div className="flex items-start justify-between mb-2.5 lg:mb-4">
                      <span className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-3 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wide">
                        {activeCourseTab === "School" ? "Boards Focus" : activeCourseTab === "Commerce" ? "High Scoring" : "Career Track"}
                      </span>
@@ -609,23 +610,23 @@ export default function Home() {
                      </div>
                    </div>
 
-                   <h3 className="text-lg font-extrabold text-[#1A3B70] mb-2 group-hover:text-[#00AEEF] transition-colors">{course.title}</h3>
+                   <h3 className="text-base lg:text-lg font-extrabold text-[#1A3B70] mb-1.5 lg:mb-2 group-hover:text-[#00AEEF] transition-colors">{course.title}</h3>
                    
                    {course.price ? (
-                     <div className="flex items-baseline gap-1.5 mb-4">
-                       <span className="text-xl font-black text-[#00AEEF]">₹${Number(course.price).toLocaleString()}</span>
+                     <div className="flex items-baseline gap-1.5 mb-3 lg:mb-4">
+                       <span className="text-lg lg:text-xl font-black text-[#00AEEF]">₹{Number(course.price).toLocaleString()}</span>
                        <span className="text-gray-400 text-[10px] font-bold uppercase">One-time / Monthly</span>
                      </div>
                    ) : (
-                     <div className="flex items-baseline gap-1.5 mb-4">
+                     <div className="flex items-baseline gap-1.5 mb-3 lg:mb-4">
                        <span className="text-sm font-extrabold text-amber-500 uppercase">Enquire for fees</span>
                      </div>
                    )}
                    
-                   <p className="text-xs text-gray-500 mb-4 leading-relaxed font-semibold">{course.desc}</p>
+                   <p className="text-xs text-gray-500 mb-3 lg:mb-4 leading-relaxed font-semibold">{course.desc}</p>
                    
                    {course.syllabus && course.syllabus.length > 0 ? (
-                     <div className="mb-4 pt-3 border-t border-gray-50">
+                     <div className="mb-3 lg:mb-4 pt-2 lg:pt-3 border-t border-gray-50">
                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">Key Areas Covered</p>
                        <div className="flex flex-wrap gap-1.5">
                          {course.syllabus.slice(0, 3).map((s, i) => (
@@ -636,7 +637,7 @@ export default function Home() {
                        </div>
                      </div>
                    ) : (
-                     <div className="mb-4 pt-3 border-t border-gray-50">
+                     <div className="mb-3 lg:mb-4 pt-2 lg:pt-3 border-t border-gray-50">
                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">Inclusions</p>
                        <div className="flex flex-wrap gap-1.5">
                          <span className="inline-block bg-slate-50 text-slate-650 px-2 py-0.5 rounded text-[10px] font-bold font-medium">Concept Lectures</span>
@@ -646,15 +647,17 @@ export default function Home() {
                    )}
                  </div>
                  
-                 <div className="space-y-2 pt-4">
-                   <Link href="/signup" className="block w-full">
-                     <button className="w-full py-2.5 bg-[#1A3B70] hover:bg-[#122A50] text-white rounded-xl font-bold transition-all text-xs cursor-pointer shadow-md group-hover:shadow-lg">
-                       Enroll in Batch
+                 <div className="flex gap-2 pt-3 lg:block lg:space-y-2 lg:pt-4">
+                   <Link href="/signup" className="flex-1 lg:block lg:w-full">
+                     <button className="w-full py-2 lg:py-2.5 bg-[#1A3B70] hover:bg-[#122A50] text-white rounded-lg lg:rounded-xl font-bold transition-all text-[11px] lg:text-xs cursor-pointer shadow-md group-hover:shadow-lg">
+                       <span className="inline lg:hidden">Enroll</span>
+                       <span className="hidden lg:inline">Enroll in Batch</span>
                      </button>
                    </Link>
-                   <Link href="/admission" className="block w-full">
-                     <button className="w-full py-2.5 border border-gray-200 text-gray-650 rounded-xl font-bold hover:bg-gray-50 transition-colors text-xs cursor-pointer">
-                       Syllabus &amp; Schedule
+                   <Link href="/admission" className="flex-1 lg:block lg:w-full">
+                     <button className="w-full py-2 lg:py-2.5 border border-gray-200 text-gray-655 rounded-lg lg:rounded-xl font-bold hover:bg-gray-50 transition-colors text-[11px] lg:text-xs cursor-pointer">
+                       <span className="inline lg:hidden">Syllabus</span>
+                       <span className="hidden lg:inline">Syllabus &amp; Schedule</span>
                      </button>
                    </Link>
                  </div>
@@ -664,7 +667,7 @@ export default function Home() {
         </div>
       </section>
       {/* Facilities Section */}
-      <section id="facilities" className="py-20 bg-[#FAFAFA] border-t border-gray-100">
+      <section id="facilities" className="py-10 lg:py-20 bg-[#FAFAFA] border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-[36px] font-bold text-[#1A3B70] mb-4">Why Commerce Gyan?</h2>
@@ -690,7 +693,7 @@ export default function Home() {
       </section>
 
       {/* Redesigned Achievers Section (Hall of Fame) */}
-      <section id="results" className="py-24 bg-gradient-to-b from-[#1A3B70] to-[#0f172a] text-white overflow-hidden relative">
+      <section id="results" className="py-12 lg:py-24 bg-gradient-to-b from-[#1A3B70] to-[#0f172a] text-white overflow-hidden relative">
         <div className="absolute top-10 left-[-150px] w-96 h-96 bg-[#00AEEF]/5 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-10 right-[-150px] w-96 h-96 bg-[#8CC63F]/5 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -709,16 +712,16 @@ export default function Home() {
               const isTopper = !isNaN(scoreNum) && scoreNum >= 90;
               const studentImg = achiever.imageUrl || (achiever.name ? `/achievers/${achiever.name.toLowerCase()}.png` : '/logo.png');
               return (
-                <div key={idx} className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4 md:p-6 text-center shadow-xl hover:-translate-y-1.5 hover:bg-white/10 hover:border-[#00AEEF]/40 transition-all duration-300 relative group flex flex-col justify-between h-full w-full">
+                <div key={idx} className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-2.5 md:p-6 text-center shadow-xl hover:-translate-y-1.5 hover:bg-white/10 hover:border-[#00AEEF]/40 transition-all duration-300 relative group flex flex-col justify-between h-full w-full">
                   {isTopper && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFCC00] text-[#1A3B70] text-[8px] md:text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md whitespace-nowrap z-10">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFCC00] text-[#1A3B70] text-[7px] md:text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md whitespace-nowrap z-10">
                       👑 TOPPER
                     </div>
                   )}
 
                   <div>
                     {/* Centered Image with explicit dimensions to prevent Layout Shift */}
-                    <div className="w-16 h-16 md:w-24 md:h-24 mx-auto rounded-full border-2 border-white/20 overflow-hidden flex items-center justify-center mb-3 md:mb-4 relative shadow-inner bg-white/10">
+                    <div className="w-12 h-12 md:w-24 md:h-24 mx-auto rounded-full border-2 border-white/20 overflow-hidden flex items-center justify-center mb-2 md:mb-4 relative shadow-inner bg-white/10">
                       <img 
                         src={studentImg} 
                         alt={achiever.name} 
@@ -739,14 +742,14 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <h3 className="font-extrabold text-white text-sm md:text-base group-hover:text-[#00AEEF] transition-colors line-clamp-1">{achiever.name}</h3>
-                    <p className="text-[#00AEEF] text-[9px] md:text-xs font-bold uppercase mt-0.5 tracking-wider line-clamp-1">{achiever.course || achiever.stream || "Commerce Boards"}</p>
+                    <h3 className="font-extrabold text-white text-xs md:text-base group-hover:text-[#00AEEF] transition-colors line-clamp-1">{achiever.name}</h3>
+                    <p className="text-[#00AEEF] text-[8px] md:text-xs font-bold uppercase mt-0.5 tracking-wider line-clamp-1">{achiever.course || achiever.stream || "Commerce Boards"}</p>
                   </div>
                   
-                  <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t border-white/5">
-                    <span className="text-xl md:text-2xl font-black text-[#FFCC00] tracking-tight">{achiever.score}</span>
+                  <div className="mt-2 md:mt-4 pt-1.5 md:pt-3 border-t border-white/5">
+                    <span className="text-base md:text-2xl font-black text-[#FFCC00] tracking-tight">{achiever.score}</span>
                     {achiever.year && (
-                      <span className="block text-[8px] md:text-[9px] text-white/40 font-bold mt-0.5 uppercase">Class of {achiever.year}</span>
+                      <span className="block text-[7px] md:text-[9px] text-white/40 font-bold mt-0.5 uppercase">Class of {achiever.year}</span>
                     )}
                   </div>
                 </div>
@@ -814,7 +817,7 @@ export default function Home() {
       </section>
 
       {/* Gallery Section */}
-      <section className="py-24 bg-white border-t border-gray-50 relative overflow-hidden">
+      <section className="py-12 lg:py-24 bg-white border-t border-gray-50 relative overflow-hidden">
         {/* Subtle backdrop glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00AEEF]/3 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -850,7 +853,7 @@ export default function Home() {
                 img: "/learningEnvironment/image4.jpeg"
               }
             ].map((g, i) => (
-              <div key={i} className="group relative rounded-2xl overflow-hidden h-[280px] shadow-lg border border-gray-100 hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-end bg-slate-900">
+              <div key={i} className="group relative rounded-2xl overflow-hidden h-[260px] lg:h-[280px] shadow-lg border border-gray-100 hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-end bg-slate-900">
                 {/* Image background with explicit layout size to prevent CLS */}
                 <img 
                   src={g.img} 
@@ -879,7 +882,7 @@ export default function Home() {
         </div>
       </section>
       {/* FAQ Section */}
-      <section className="py-24 bg-slate-50">
+      <section className="py-12 pb-28 lg:py-24 lg:pb-24 bg-slate-50">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-16 space-y-3">
             <div className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider">
@@ -937,7 +940,7 @@ export default function Home() {
       </section>
 
       {/* Sticky Admissions CTA Bar */}
-      <div className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-45 bg-[#1A3B70]/95 backdrop-blur-md border-t border-white/10 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] py-4 px-6 md:px-12 flex items-center justify-between text-white animate-slide-down">
+      <div className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-45 bg-[#1A3B70]/95 backdrop-blur-md border-t border-white/10 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] py-2.5 px-4 lg:py-4 lg:px-12 flex items-center justify-between text-white animate-slide-down">
         <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#8CC63F] rounded-full animate-ping"></span>

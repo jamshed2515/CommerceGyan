@@ -8,7 +8,7 @@ export default function WhatsAppButton() {
       target="_blank"
       rel="noreferrer"
       aria-label="Chat on WhatsApp"
-      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 group"
+      className="fixed bottom-[125px] lg:bottom-6 right-4 lg:right-6 z-50 group"
     >
       <div className="relative">
         {/* Pulse rings */}
