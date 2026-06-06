@@ -1,11 +1,15 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+
+const inp = "w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#00AEEF] focus:ring-2 focus:ring-[#00AEEF]/20 outline-none text-sm bg-white transition-all";
 
 export default function AdminLogin() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,38 +30,61 @@ export default function AdminLogin() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0D1E3A] flex items-center justify-center p-6 font-[family-name:var(--font-mulish)]">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-white mb-1">Commerce<span className="text-[#FFCC00]">Giyan</span></h1>
-          <p className="text-white/60 text-sm">Admin Control Panel</p>
+    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-5 py-8 font-[family-name:var(--font-mulish)]">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <Link href="/"><Image src="/logo.png" alt="Commerce Gyan" width={200} height={60} className="object-contain max-h-[60px] w-auto" priority /></Link>
         </div>
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="bg-[#1A3B70] p-6 text-center">
-            <div className="w-14 h-14 bg-[#FFCC00] rounded-full flex items-center justify-center text-2xl mx-auto mb-3">🔐</div>
-            <h2 className="text-xl font-black text-white">Admin Login</h2>
+
+        {/* Admin badge */}
+        <div className="flex justify-center mb-6">
+          <span className="bg-[#1A3B70] text-white text-xs font-black px-4 py-1.5 rounded-full tracking-wide">🔐 ADMIN PORTAL</span>
+        </div>
+
+        <h2 className="text-xl font-black text-gray-800 mb-1">Admin Login</h2>
+        <p className="text-gray-400 text-sm mb-6">Access the Commerce Gyan control panel</p>
+
+        {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">⚠️ {error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-bold text-gray-800 mb-2">Admin Email</label>
+            <input type="email" required placeholder="Enter admin email" value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })} className={inp} />
           </div>
-          <div className="p-8">
-            {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">⚠️ {error}</div>}
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div>
-                <label className="block text-[13px] font-bold text-gray-700 mb-1.5">Admin Email</label>
-                <input type="email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#1A3B70] outline-none text-[14px] bg-gray-50" placeholder="Admin email" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-bold text-gray-700 mb-1.5">Password</label>
-                <input type="password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#1A3B70] outline-none text-[14px] bg-gray-50" placeholder="Admin password" />
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full py-3.5 bg-[#1A3B70] text-white font-black rounded-lg hover:bg-[#122A50] transition-colors disabled:opacity-60">
-                {loading ? "Signing in..." : "Access Dashboard →"}
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-bold text-gray-800">Password</label>
+            </div>
+            <div className="relative">
+              <input type={showPw ? "text" : "password"} required placeholder="Enter admin password"
+                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                className={`${inp} pr-20`} />
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 font-bold">
+                {showPw ? "Hide" : "Show"}
               </button>
-            </form>
-            <div className="mt-4 text-center"><Link href="/" className="text-sm text-gray-400 hover:text-[#00AEEF]">← Back to website</Link></div>
+            </div>
           </div>
-        </div>
+
+          <button type="submit" disabled={loading}
+            className="w-full py-3.5 bg-[#1A3B70] text-white font-black rounded-xl hover:bg-[#122A50] transition-colors disabled:opacity-50 text-sm">
+            {loading ? "Signing in..." : "Access Dashboard →"}
+          </button>
+        </form>
+
+        <p className="text-center mt-6">
+          <Link href="/login" className="text-xs text-gray-400 hover:text-[#1A3B70] font-semibold transition-colors">
+            ← Back to Student / Teacher Login
+          </Link>
+        </p>
+
+        <p className="text-center text-xs text-gray-400 mt-6">
+          By proceeding, you agree to Commerce Gyan&apos;s{" "}
+          <span className="text-[#00AEEF]">Privacy Policy</span>
+        </p>
       </div>
     </main>
   );

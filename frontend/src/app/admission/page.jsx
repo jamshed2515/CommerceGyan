@@ -34,14 +34,14 @@ export default function Admission() {
   };
 
   const openWhatsApp = () => {
-    const msg = encodeURIComponent(`Hello Sir, I have submitted an admission enquiry for *${form.className}* (${form.stream}) at Commerce Giyan. My name is ${form.studentName}. Please contact me at ${form.parentPhone}.`);
+    const msg = encodeURIComponent(`Hello Sir, I have submitted an admission enquiry for *${form.className}* (${form.stream}) at Commerce Gyan. My name is ${form.studentName}. Please contact me at ${form.parentPhone}.`);
     window.open(`https://wa.me/918271365450?text=${msg}`, "_blank");
   };
 
   return (
     <main className="min-h-screen bg-white font-[family-name:var(--font-mulish)]">
       <nav className="w-full bg-white border-b border-gray-100 shadow-sm py-4 px-6 flex justify-between items-center sticky top-0 z-50">
-        <Link href="/"><Image src="/logo.png" alt="Commerce Giyan" width={180} height={50} className="object-contain max-h-[50px] w-auto" priority /></Link>
+        <Link href="/"><Image src="/logo.png" alt="Commerce Gyan" width={180} height={50} className="object-contain max-h-[50px] w-auto" priority /></Link>
         <Link href="/" className="text-[14px] font-bold text-gray-500 hover:text-[#00AEEF] flex items-center gap-1">← Back to Home</Link>
       </nav>
 

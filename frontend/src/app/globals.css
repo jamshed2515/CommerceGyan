@@ -10,6 +10,18 @@
   --color-bg-alt: #F4F4F4;
   --color-text: #002D5B;
   --color-text-muted: #555555;
+  --animate-slide-down: slide-down 0.2s ease-out forwards;
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer base {
@@ -56,4 +68,19 @@ body {
 }
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+/* Hide Next.js dev mode floating indicator */
+nextjs-portal {
+  display: none !important;
+}
+
+/* Custom Select Modern Styling */
+select {
+  appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%252394a3b8%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E") !important;
+  background-size: 1.25rem !important;
+  background-position: right 0.75rem center !important;
+  background-repeat: no-repeat !important;
+  padding-right: 2.5rem !important;
 }

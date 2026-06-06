@@ -11,7 +11,7 @@ export default function Contact() {
         <Link href="/" className="inline-block">
           <Image 
             src="/logo.png" 
-            alt="Commerce Giyan Logo" 
+            alt="Commerce Gyan Logo" 
             width={180} 
             height={50} 
             className="object-contain max-h-[50px] w-auto"
@@ -80,7 +80,7 @@ export default function Contact() {
                 <div>
                   <h4 className="font-bold text-[#1A3B70] text-[16px]">Email Us</h4>
                   <p className="text-gray-600 text-[14px] mt-1">
-                    commercegiyan@gmail.com
+                    commerceGyan@gmail.com
                   </p>
                 </div>
               </div>

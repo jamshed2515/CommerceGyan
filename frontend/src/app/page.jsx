@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WhatsAppButton from "../components/WhatsAppButton";
@@ -9,10 +9,20 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
+  const [dbCourses, setDbCourses] = useState([]);
+  const [dbAchievers, setDbAchievers] = useState([]);
 
   useEffect(() => {
     fetch("http://localhost:5000/api/announcements")
       .then(r => r.json()).then(d => setAnnouncements(Array.isArray(d) ? d.slice(0, 5) : []))
+      .catch(() => {});
+
+    fetch("http://localhost:5000/api/courses")
+      .then(r => r.json()).then(d => setDbCourses(Array.isArray(d) ? d : []))
+      .catch(() => {});
+
+    fetch("http://localhost:5000/api/achievers")
+      .then(r => r.json()).then(d => setDbAchievers(Array.isArray(d) ? d : []))
       .catch(() => {});
   }, []);
 
@@ -20,7 +30,7 @@ export default function Home() {
     {
       subtitle: "Don't just prepare.",
       title: "Prepare smarter",
-      highlight: "with Commerce Giyan",
+      highlight: "with Commerce Gyan",
       btnText: "Know More",
       image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
     },
@@ -40,7 +50,7 @@ export default function Home() {
     }
   ];
 
-  const courses = {
+  const defaultCourses = {
     School: [
       { title: "Class 7", desc: "Build a strong foundation for future success." },
       { title: "Class 8", desc: "Concept building and olympiad preparation." },
@@ -58,6 +68,45 @@ export default function Home() {
       { title: "CS Foundation", desc: "Company Secretary foundation course." }
     ]
   };
+
+  const displayCourses = useMemo(() => {
+    if (dbCourses.length === 0) return defaultCourses;
+    
+    const grouped = { School: [], Commerce: [], Professional: [] };
+    dbCourses.forEach(c => {
+      const item = {
+        title: c.title,
+        desc: c.description,
+        price: c.price,
+        syllabus: c.syllabus || []
+      };
+      
+      const aud = c.targetAudience;
+      if (aud === "Class 7 to 10") {
+        grouped.School.push(item);
+      } else if (aud === "Class 11 to 12 Commerce") {
+        grouped.Commerce.push(item);
+      } else {
+        grouped.Professional.push(item);
+      }
+    });
+
+    return {
+      School: grouped.School.length > 0 ? grouped.School : defaultCourses.School,
+      Commerce: grouped.Commerce.length > 0 ? grouped.Commerce : defaultCourses.Commerce,
+      Professional: grouped.Professional.length > 0 ? grouped.Professional : defaultCourses.Professional
+    };
+  }, [dbCourses]);
+
+  const defaultAchievers = [
+    { name: 'Pariniti', score: '91.2%' },
+    { name: 'Kishore', score: '89.8%' },
+    { name: 'Rinki', score: '89%' },
+    { name: 'Subhadra', score: '87.4%' },
+    { name: 'Uday', score: '85.4%' }
+  ];
+
+  const displayAchievers = dbAchievers.length > 0 ? dbAchievers : defaultAchievers;
 
   return (
     <main className="min-h-screen bg-white text-[var(--color-text)] font-[family-name:var(--font-mulish)]">
@@ -89,7 +138,7 @@ export default function Home() {
           <Link href="/" className="flex items-center">
             <Image 
               src="/logo.png" 
-              alt="Commerce Giyan Logo" 
+              alt="Commerce Gyan Logo" 
               width={220} 
               height={60} 
               className="object-contain max-h-[60px] w-auto"
@@ -230,97 +279,90 @@ export default function Home() {
       </section>
 
       {/* Select your goal Section */}
-      <section className="py-20 bg-white">
+      <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-[36px] font-bold text-[#2D2D2D] mb-12">
+          <h2 className="text-[28px] md:text-[36px] font-bold text-[#2D2D2D] mb-12">
             Select your goal <span className="text-[#00AEEF]">to explore our courses</span>
           </h2>
           
-          <div className="flex justify-center gap-6 md:gap-10">
-            {/* School Card */}
-            <div className="w-[140px] md:w-[160px] flex flex-col items-center">
-               <div className="w-[120px] h-[120px] rounded-[20px] border border-gray-200 shadow-[0_2px_10px_rgba(0,0,0,0.04)] flex items-center justify-center mb-4 overflow-hidden relative group hover:border-[#00AEEF] transition-colors cursor-pointer bg-white">
-                  <span className="text-6xl group-hover:scale-110 transition-transform duration-300">🎒</span>
-               </div>
-               <p className="font-bold text-[#2D2D2D] text-[18px]">School</p>
-            </div>
-            
-            {/* Commerce Card */}
-            <div className="w-[140px] md:w-[160px] flex flex-col items-center">
-               <div className="w-[120px] h-[120px] rounded-[20px] border border-gray-200 shadow-[0_2px_10px_rgba(0,0,0,0.04)] flex items-center justify-center mb-4 overflow-hidden relative group hover:border-[#00AEEF] transition-colors cursor-pointer bg-white">
-                  <span className="text-6xl group-hover:scale-110 transition-transform duration-300">📊</span>
-               </div>
-               <p className="font-bold text-[#2D2D2D] text-[18px]">Commerce</p>
-            </div>
-
-            {/* Professional Card */}
-            <div className="w-[140px] md:w-[160px] flex flex-col items-center">
-               <div className="w-[120px] h-[120px] rounded-[20px] border border-gray-200 shadow-[0_2px_10px_rgba(0,0,0,0.04)] flex items-center justify-center mb-4 overflow-hidden relative group hover:border-[#00AEEF] transition-colors cursor-pointer bg-white">
-                  <span className="text-6xl group-hover:scale-110 transition-transform duration-300">🎓</span>
-               </div>
-               <p className="font-bold text-[#2D2D2D] text-[18px]">Professional</p>
-            </div>
+          <div className="grid grid-cols-3 gap-4 max-w-[380px] md:max-w-none md:flex md:justify-center md:gap-10 mx-auto">
+            {[
+              { icon: '🎒', label: 'School' },
+              { icon: '📊', label: 'Commerce' },
+              { icon: '🎓', label: 'Professional' },
+            ].map((item) => (
+              <div key={item.label} className="flex flex-col items-center">
+                <div 
+                  onClick={() => setActiveCourseTab(item.label)}
+                  className={`w-full aspect-square max-w-[110px] md:w-[140px] md:h-[140px] rounded-[20px] border shadow-[0_2px_10px_rgba(0,0,0,0.04)] flex items-center justify-center mb-3 relative group hover:border-[#00AEEF] hover:shadow-[0_4px_20px_rgba(0,174,239,0.15)] transition-all duration-300 cursor-pointer mx-auto ${activeCourseTab === item.label ? 'border-[#00AEEF] bg-[#E6F4FE]' : 'border-gray-200 bg-white'}`}
+                >
+                  <span className="text-5xl md:text-6xl group-hover:scale-110 transition-transform duration-300">{item.icon}</span>
+                </div>
+                <p className="font-bold text-[#2D2D2D] text-[14px] md:text-[18px]">{item.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Mentor / Admissions Section — Full Photo Layout */}
-      <section className="bg-white border-t border-gray-100 overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row min-h-[420px]">
 
-            {/* LEFT — Teacher Photo (entire image, no crop) */}
-            <div className="w-full lg:w-1/2 flex-shrink-0 relative bg-[#1A3B70] overflow-hidden">
+      {/* Mentor / Admissions Section — Viewport-Fit Layout */}
+      <section className="bg-white border-t border-gray-100 overflow-hidden" style={{ height: '78vh' }}>
+        <div className="max-w-7xl mx-auto h-full">
+          <div className="flex flex-col lg:flex-row h-full">
+
+            {/* LEFT — Teacher Photo — auto-width column, zero gutters */}
+            <div className="relative bg-[#1A3B70] flex-shrink-0 h-[45vw] lg:h-full w-full lg:w-auto">
               <img
                 src="/teacher.png"
                 alt="Tabarak Sir — Lead Mentor"
-                className="w-full h-auto block"
+                className="h-full w-auto block"
               />
-              {/* Name badge pinned at bottom */}
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
-                <div className="inline-flex items-center gap-2 bg-[#FFCC00] text-[#1A3B70] px-4 py-2 rounded-full font-black text-[15px] shadow-lg">
+              {/* Name badge */}
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center z-10">
+                <div className="inline-flex items-center gap-1.5 bg-[#FFCC00] text-[#1A3B70] px-3.5 py-1.5 rounded-full font-black text-[13px] shadow-lg">
                   <span>⭐</span> TABARAK SIR — Lead Mentor
                 </div>
               </div>
             </div>
 
             {/* RIGHT — Info Panel */}
-            <div className="flex-1 bg-[#F4F9FF] flex flex-col justify-center px-8 py-8 lg:px-12">
-              <div className="inline-block px-4 py-1.5 rounded-full bg-[#E6F4FE] text-[#00AEEF] font-bold text-xs uppercase tracking-wide border border-[#B3E3FA] mb-3 self-start">
+            <div className="flex-1 bg-[#F4F9FF] flex flex-col justify-center px-6 py-4 lg:px-10 overflow-y-auto min-w-0">
+              <div className="inline-block px-3 py-1 rounded-full bg-[#E6F4FE] text-[#00AEEF] font-bold text-xs uppercase tracking-wide border border-[#B3E3FA] mb-2 self-start">
                 🎓 Admissions Open 2026-27
               </div>
 
-              <h2 className="text-[26px] md:text-[30px] font-black text-[#1A3B70] leading-tight mb-3">
+              <h2 className="text-[20px] md:text-[24px] font-black text-[#1A3B70] leading-tight mb-2">
                 Learn From <br />
                 <span className="text-[#00AEEF]">The Best</span>
               </h2>
 
-              <p className="text-gray-600 leading-relaxed text-[13px] mb-4">
+              <p className="text-gray-600 leading-relaxed text-[13px] mb-2.5">
                 We provide the most comprehensive syllabus coverage with weekly test series, PDF notes, and concept-based teaching in small batch sizes for maximum attention.
               </p>
 
               {/* Credential badges */}
-              <div className="flex flex-col gap-2.5 mb-4">
-                <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 shadow-sm border border-gray-100">
-                  <span className="w-7 h-7 rounded-full bg-[#E6F4FE] text-[#00AEEF] flex items-center justify-center font-black text-xs flex-shrink-0">✓</span>
+              <div className="flex flex-col gap-1.5 mb-2.5">
+                <div className="flex items-center gap-3 bg-white rounded-xl px-3.5 py-1.5 shadow-sm border border-gray-100">
+                  <span className="w-6 h-6 rounded-full bg-[#E6F4FE] text-[#00AEEF] flex items-center justify-center font-black text-xs flex-shrink-0">✓</span>
                   <span className="text-gray-700 font-bold text-[13px]">NET Qualified &amp; M.Com</span>
                 </div>
-                <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 shadow-sm border border-gray-100">
-                  <span className="w-7 h-7 rounded-full bg-[#E6F4FE] text-[#00AEEF] flex items-center justify-center font-black text-xs flex-shrink-0">✓</span>
+                <div className="flex items-center gap-3 bg-white rounded-xl px-3.5 py-1.5 shadow-sm border border-gray-100">
+                  <span className="w-6 h-6 rounded-full bg-[#E6F4FE] text-[#00AEEF] flex items-center justify-center font-black text-xs flex-shrink-0">✓</span>
                   <span className="text-gray-700 font-bold text-[13px]">B.Ed &amp; CMA (Inter Level)</span>
                 </div>
-                <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 shadow-sm border border-gray-100">
-                  <span className="w-7 h-7 rounded-full bg-[#FFCC00] text-[#1A3B70] flex items-center justify-center font-black text-xs flex-shrink-0">★</span>
+                <div className="flex items-center gap-3 bg-white rounded-xl px-3.5 py-1.5 shadow-sm border border-gray-100">
+                  <span className="w-6 h-6 rounded-full bg-[#FFCC00] text-[#1A3B70] flex items-center justify-center font-black text-xs flex-shrink-0">★</span>
                   <span className="text-gray-700 font-bold text-[13px]">7+ Years Teaching Experience</span>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-gray-200">
-                <p className="font-bold text-gray-400 uppercase tracking-wider text-xs mb-3">
+              <div className="pt-2 border-t border-gray-200">
+                <p className="font-bold text-gray-400 uppercase tracking-wider text-xs mb-2">
                   Class 7 to 12 | B.Com | CA | CMA | CS
                 </p>
                 <Link href="/signup">
-                  <button className="bg-[#1A3B70] text-white font-bold text-[13px] px-6 py-2.5 rounded-xl hover:bg-[#122A50] transition-colors shadow-md">
+                  <button className="bg-[#1A3B70] text-white font-bold text-[13px] px-6 py-2 rounded-xl hover:bg-[#122A50] transition-colors shadow-md">
                     Enrol Now →
                   </button>
                 </Link>
@@ -331,6 +373,9 @@ export default function Home() {
         </div>
       </section>
 
+
+
+
       {/* Courses Mega-Menu Style Section (From previous design, integrated) */}
       <section id="programs" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
@@ -339,7 +384,7 @@ export default function Home() {
           </div>
           
           <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {Object.keys(courses).map((tab) => (
+            {Object.keys(displayCourses).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveCourseTab(tab)}
@@ -354,12 +399,30 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {courses[activeCourseTab].map((course, idx) => (
-              <div key={idx} className="bg-white rounded-[20px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-shadow border border-gray-100 flex flex-col h-full">
-                 <h3 className="text-[18px] font-bold text-[#1A3B70] mb-3">{course.title}</h3>
-                 <p className="text-[14px] text-gray-500 mb-6 flex-grow leading-relaxed font-medium">{course.desc}</p>
-                 <button className="w-full py-2.5 border-2 border-[#1A3B70] text-[#1A3B70] rounded-lg font-bold hover:bg-[#1A3B70] hover:text-white transition-colors text-[14px]">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {displayCourses[activeCourseTab].map((course, idx) => (
+              <div key={idx} className="bg-white rounded-[20px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-shadow border border-gray-100 flex flex-col h-full justify-between">
+                 <div>
+                   <h3 className="text-[17px] font-black text-[#1A3B70] mb-2">{course.title}</h3>
+                   {course.price && (
+                     <div className="text-[14px] font-black text-[#00AEEF] mb-3">
+                       ₹{Number(course.price).toLocaleString()}
+                     </div>
+                   )}
+                   <p className="text-[13px] text-gray-500 mb-4 leading-relaxed font-medium">{course.desc}</p>
+                   
+                   {course.syllabus && course.syllabus.length > 0 && (
+                     <div className="mb-4">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide mb-1">Topics Covered</p>
+                       <ul className="text-xs text-gray-600 space-y-0.5 list-disc pl-4">
+                         {course.syllabus.slice(0, 3).map((s, i) => (
+                           <li key={i} className="truncate">{s}</li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
+                 </div>
+                 <button className="w-full py-2.5 border-2 border-[#1A3B70] text-[#1A3B70] rounded-xl font-bold hover:bg-[#1A3B70] hover:text-white transition-colors text-[13px] mt-4">
                    View Details
                  </button>
               </div>
@@ -372,21 +435,22 @@ export default function Home() {
       <section id="facilities" className="py-20 bg-[#FAFAFA] border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-[36px] font-bold text-[#1A3B70] mb-4">Why Commerce Giyan?</h2>
+            <h2 className="text-[36px] font-bold text-[#1A3B70] mb-4">Why Commerce Gyan?</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {[
               { icon: '📄', title: 'PDF Notes' },
               { icon: '📝', title: 'Weekly Test Series' },
               { icon: '👨‍🏫', title: 'Concept Based Teaching' },
               { icon: '❓', title: 'Doubt Clearing' },
-              { icon: '👥', title: 'Small Batch Size' }
+              { icon: '👥', title: 'Small Batch Size' },
+              { icon: '🏆', title: 'Result Oriented' },
             ].map((facility, idx) => (
-              <div key={idx} className="bg-white rounded-[20px] p-6 text-center hover:-translate-y-2 transition-transform duration-300 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-                <div className="w-14 h-14 mx-auto bg-[#E6F4FE] rounded-full flex items-center justify-center text-2xl mb-4 text-[#00AEEF]">
+              <div key={idx} className="bg-white rounded-[20px] p-6 text-center hover:-translate-y-2 hover:shadow-[0_8px_30px_rgba(0,174,239,0.12)] transition-all duration-300 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.04)] cursor-pointer group">
+                <div className="w-14 h-14 mx-auto bg-[#E6F4FE] rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-[#1A3B70] transition-colors duration-300">
                   {facility.icon}
                 </div>
-                <h4 className="font-bold text-[#1A3B70] text-[15px]">{facility.title}</h4>
+                <h4 className="font-bold text-[#1A3B70] text-[14px] leading-snug">{facility.title}</h4>
               </div>
             ))}
           </div>
@@ -400,20 +464,26 @@ export default function Home() {
             <h2 className="text-[36px] font-bold text-white mb-4">Our Achievers</h2>
           </div>
           <div className="flex flex-wrap justify-center gap-6">
-            {[
-              { name: 'Pariniti', score: '91.2%' },
-              { name: 'Kishore', score: '89.8%' },
-              { name: 'Rinki', score: '89%' },
-              { name: 'Subhadra', score: '87.4%' },
-              { name: 'Uday', score: '85.4%' }
-            ].map((achiever, idx) => (
-              <div key={idx} className="bg-white rounded-[20px] overflow-hidden w-44 text-center shadow-lg hover:scale-105 transition-transform duration-300">
-                <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 border-b border-gray-100">
-                  <span className="text-5xl">👤</span>
-                </div>
-                <div className="p-4">
-                  <div className="font-bold text-[#1A3B70] text-[16px] mb-1">{achiever.name}</div>
-                  <div className="text-[#00AEEF] font-black text-[24px]">{achiever.score}</div>
+            {displayAchievers.map((achiever, idx) => (
+              <div key={idx} className="bg-white rounded-[20px] overflow-hidden w-44 text-center shadow-lg hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
+                <div>
+                  <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 border-b border-gray-100 overflow-hidden relative">
+                    {achiever.imageUrl ? (
+                      <img src={achiever.imageUrl} alt={achiever.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-5xl">👤</span>
+                    )}
+                    {achiever.year && (
+                      <span className="absolute top-2 right-2 bg-[#1A3B70] text-[#FFCC00] text-[9px] font-black px-1.5 py-0.5 rounded">
+                        {achiever.year}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <div className="font-bold text-[#1A3B70] text-[15px] mb-1 truncate">{achiever.name}</div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase truncate mb-2">{achiever.course || "Commerce"}</div>
+                    <div className="text-[#00AEEF] font-black text-[22px]">{achiever.score}</div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -426,7 +496,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 mb-12">
           <div className="md:col-span-1">
             <h4 className="text-[24px] font-black mb-6 text-white tracking-tight">
-              Commerce<span className="text-[#00AEEF]">Giyan</span>
+              Commerce<span className="text-[#00AEEF]">Gyan</span>
             </h4>
             <p className="text-white/60 text-[14px] font-medium leading-relaxed mb-6">
               India's premier coaching institute for commerce and professional courses, dedicated to conceptual clarity and student success.
@@ -454,22 +524,22 @@ export default function Home() {
               </li>
               <li className="flex items-center gap-3">
                 <span className="text-[#00AEEF] text-base">✉️</span>
-                <span>commercegiyan@gmail.com</span>
+                <span>commerceGyan@gmail.com</span>
               </li>
             </ul>
           </div>
           <div>
             <div className="bg-[#122A50] p-6 rounded-[20px] border border-white/5 text-center">
-              <h4 className="font-bold text-white text-[18px] mb-2">Ready to Start?</h4>
-              <p className="text-white/70 text-[13px] font-medium mb-4">Book your free counseling session today.</p>
-              <Link href="/admission" className="block w-full py-3 bg-[#00AEEF] text-white font-bold rounded-lg hover:bg-[#009CD6] transition-colors text-[14px] text-center">
+               <h4 className="font-bold text-white text-[18px] mb-2">Ready to Start?</h4>
+               <p className="text-white/70 text-[13px] font-medium mb-4">Book your free counseling session today.</p>
+               <Link href="/admission" className="block w-full py-3 bg-[#00AEEF] text-white font-bold rounded-lg hover:bg-[#009CD6] transition-colors text-[14px] text-center">
                 Enquire Now
               </Link>
             </div>
           </div>
         </div>
         <div className="max-w-7xl mx-auto pt-6 border-t border-white/10 text-center text-white/40 text-[13px] font-medium flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>&copy; {new Date().getFullYear()} Commerce Giyan. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Commerce Gyan. All Rights Reserved.</p>
         </div>
       </footer>
 

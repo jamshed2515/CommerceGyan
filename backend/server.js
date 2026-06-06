@@ -20,8 +20,12 @@ app.use("/api/notes", require("./routes/noteRoutes"));
 app.use("/api/enquiry", require("./routes/enquiryRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/batches", require("./routes/batchRoutes"));
+app.use("/api/schedules", require("./routes/scheduleRoutes"));
+app.use("/api/fees", require("./routes/feeRoutes"));
+app.use("/api/achievers", require("./routes/achieverRoutes"));
 
-app.get("/", (req, res) => res.send("Commerce Giyan API is running ✅"));
+app.get("/", (req, res) => res.send("Commerce Gyan API is running ✅"));
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/katras_db";

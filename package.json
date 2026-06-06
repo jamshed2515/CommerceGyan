@@ -1,0 +1,12 @@
+{
+  "name": "coaching-website-root",
+  "version": "1.0.0",
+  "description": "Root package for managing frontend and backend concurrently",
+  "scripts": {
+    "install-all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

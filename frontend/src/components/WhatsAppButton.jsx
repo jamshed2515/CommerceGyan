@@ -1,14 +1,14 @@
 "use client";
 
 export default function WhatsAppButton() {
-  const msg = encodeURIComponent("Hello Sir, I am interested in admissions at Commerce Giyan. Please guide me.");
+  const msg = encodeURIComponent("Hello Sir, I am interested in admissions at Commerce Gyan. Please guide me.");
   return (
     <a
       href={`https://wa.me/918271365450?text=${msg}`}
       target="_blank"
       rel="noreferrer"
       aria-label="Chat on WhatsApp"
-      className="fixed bottom-6 right-6 z-50 group"
+      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 group"
     >
       <div className="relative">
         {/* Pulse rings */}

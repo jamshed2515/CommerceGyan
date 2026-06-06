@@ -13,6 +13,7 @@
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "coaching-website-root": "file:..",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -22,5 +23,8 @@
     "nodemailer": "^8.0.7",
     "razorpay": "^2.9.6",
     "stripe": "^22.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
