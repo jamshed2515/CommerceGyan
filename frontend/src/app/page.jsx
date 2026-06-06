@@ -122,7 +122,7 @@ export default function Home() {
   const displayAchievers = dbAchievers.length > 0 ? dbAchievers : defaultAchievers;
 
   return (
-    <main className="min-h-screen bg-white text-[var(--color-text)] font-[family-name:var(--font-mulish)] overflow-x-hidden">
+    <main className="min-h-screen bg-white text-[var(--color-text)] font-[family-name:var(--font-mulish)] overflow-x-hidden pt-[75px] lg:pt-[80px]">
 
       {/* Announcements Ticker */}
       {announcements.length > 0 && (
@@ -145,7 +145,7 @@ export default function Home() {
       )}
       
       {/* Top Navbar with Glassmorphism */}
-      <nav className={`sticky top-0 w-full z-50 transition-all duration-300 flex items-center justify-between px-6 backdrop-blur-md ${
+      <nav className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 flex items-center justify-between px-6 backdrop-blur-md ${
         isScrolled 
           ? "bg-white/90 border-b border-gray-200/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] h-[60px] lg:h-[70px]" 
           : "bg-white/95 border-b border-gray-100/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)] h-[75px] lg:h-[80px]"
