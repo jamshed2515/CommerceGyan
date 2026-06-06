@@ -12,6 +12,7 @@ const STREAMS = {
 
 export default function Signup() {
   const router = useRouter();
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", stream: "", className: "", address: "" });
   const [showPw, setShowPw] = useState(false);
   const [agreed, setAgreed] = useState(false);
@@ -47,6 +48,10 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (step < 3) {
+      handleNext();
+      return;
+    }
     if (!form.stream || !form.className) { 
       showToast("Please select your stream and class.", "error");
       setError("Please select your stream and class."); 
@@ -94,35 +99,44 @@ export default function Signup() {
     }
   };
 
-  const inputClass = "w-full h-[54px] px-4 rounded-xl border border-slate-200 bg-white text-sm text-gray-800 placeholder-slate-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300";
-  const selectClass = "w-full h-[54px] px-4 rounded-xl border border-slate-200 bg-white text-sm text-gray-800 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300 disabled:opacity-50 disabled:bg-slate-50";
+  const validateStep1 = () => {
+    return form.firstName.trim() && form.lastName.trim() && form.email.trim() && form.phone.trim().length >= 10;
+  };
+
+  const validateStep2 = () => {
+    return form.stream && form.className && form.address.trim();
+  };
+
+  const handleNext = () => {
+    setError("");
+    if (step === 1) {
+      if (!validateStep1()) {
+        setError("Please enter valid details in all fields.");
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      if (!validateStep2()) {
+        setError("Please select your stream, class, and enter address.");
+        return;
+      }
+      setStep(3);
+    }
+  };
+
+  const handleBack = () => {
+    setError("");
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const inputClass = "w-full h-[56px] px-4 rounded-[14px] border border-[#e5e7eb] bg-white text-sm text-gray-800 placeholder-slate-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300";
+  const selectClass = "w-full h-[56px] px-4 rounded-[14px] border border-[#e5e7eb] bg-white text-sm text-gray-800 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300 disabled:opacity-50 disabled:bg-slate-50";
 
   return (
-    <main className="min-h-screen flex font-[family-name:var(--font-mulish)] relative overflow-hidden bg-white">
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes floatSlow {
-          0%, 100% { transform: translateY(0px) scale(1); }
-          50% { transform: translateY(-20px) scale(1.05); }
-        }
-        @keyframes floatMid {
-          0%, 100% { transform: translateY(0px) scale(1); }
-          50% { transform: translateY(-15px) scale(0.95); }
-        }
-        @keyframes floatFast {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-float-slow {
-          animation: floatSlow 8s ease-in-out infinite;
-        }
-        .animate-float-mid {
-          animation: floatMid 6s ease-in-out infinite;
-        }
-        .animate-float-fast {
-          animation: floatFast 4s ease-in-out infinite;
-        }
-      `}} />
-
+    <main className="min-h-screen flex flex-col lg:flex-row font-[family-name:var(--font-mulish)] bg-white relative overflow-hidden">
+      
       {/* SUCCESS / ERROR TOAST */}
       {toast.show && (
         <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] border transition-all duration-300 ${
@@ -139,217 +153,264 @@ export default function Signup() {
         </div>
       )}
 
-      {/* LEFT — Branding Panel */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 text-white select-none">
-        {/* Animated background bubbles */}
-        <div className="absolute top-1/4 left-1/4 w-36 h-36 bg-white/5 rounded-full blur-2xl animate-float-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-52 h-52 bg-[#0ea5e9]/10 rounded-full blur-3xl animate-float-mid" />
-        <div className="absolute top-12 right-12 w-28 h-28 bg-indigo-500/10 rounded-full blur-xl animate-float-fast" />
+      {/* LEFT PANEL — Split Screen Left (50% on Desktop) */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-[#00AEEF] text-white select-none flex-col justify-between p-12">
+        {/* Logo at Top Left */}
+        <div className="relative z-10 text-left">
+          <Link href="/">
+            <img src="/logo.png" alt="Commerce Gyan Logo" className="h-[46px] w-auto object-contain invert mix-blend-screen opacity-95" />
+          </Link>
+        </div>
 
-        <div className="relative z-10 flex-1 flex flex-col justify-between max-w-sm mx-auto w-full">
-          {/* Logo container inside content column */}
-          <div className="pt-4">
-            <Link href="/">
-              <div className="bg-white/10 border border-white/10 px-5 py-3 rounded-2xl inline-block backdrop-blur-md hover:bg-white/15 transition-all duration-200">
-                <img src="/logo.png" alt="Commerce Gyan" className="h-8 w-auto object-contain invert mix-blend-screen opacity-90" />
-              </div>
-            </Link>
+        {/* Center illustration & copy */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 max-w-md mx-auto">
+          <div className="w-full max-w-[340px]">
+            <img src="/students_illustration.png" alt="Students studying" className="w-full h-auto object-contain" />
           </div>
-
-          {/* Dynamic Showcase Content */}
-          <div className="my-auto py-10">
-            <span className="text-xs font-black text-[#0ea5e9] tracking-widest uppercase mb-3 block">Join our Community</span>
-            <h1 className="text-4xl font-black leading-[1.15] tracking-tight mb-8">
-              Empowering Future <br />
-              Commerce <span className="bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8] bg-clip-text text-transparent">Leaders</span>
+          <div className="space-y-3">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Empowering Future Leaders
             </h1>
-            
-            {/* Bullets with icons */}
-            <div className="space-y-5">
-              {[
-                { text: "98.2% Board Pass Rate", desc: "Consistently delivering top district ranks" },
-                { text: "150+ CA & Board Toppers", desc: "Alumni studying at top universities and clearing CA foundation" },
-                { text: "Expert Faculty Team", desc: "Mentored by NET qualified and post-graduate teachers" },
-                { text: "Career-Focused Learning", desc: "Conceptual clarity and personal workspace tracking" }
-              ].map((b, i) => (
-                <div key={i} className="flex gap-4 items-start group">
-                  <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm group-hover:bg-[#0ea5e9]/20 transition-colors shrink-0">✨</span>
-                  <div>
-                    <h4 className="font-extrabold text-white text-[15px] leading-tight">{b.text}</h4>
-                    <p className="text-blue-200/60 text-[12px] mt-0.5 font-medium">{b.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-white/80 text-[14px] font-semibold leading-relaxed max-w-sm mx-auto">
+              Join Commerce Gyan and unlock expert guidance, structured learning, and career-focused education.
+            </p>
           </div>
+        </div>
 
-          {/* Footer */}
-          <div className="pb-4">
-            <p className="text-blue-300/40 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
-          </div>
+        {/* Footer */}
+        <div className="relative z-10 text-left">
+          <p className="text-white/40 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
         </div>
       </div>
 
-      {/* RIGHT — Signup Form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-10 bg-slate-50/50 overflow-y-auto">
-        <div className="w-full max-w-[440px] bg-white rounded-3xl border border-slate-100 shadow-[0_12px_40px_rgba(15,23,42,0.04)] p-8 md:p-10 my-4">
-          {/* Mobile logo */}
-          <div className="flex justify-center mb-6 lg:hidden">
+      {/* RIGHT PANEL — Split Screen Right (50% on Desktop, 100% on Mobile) */}
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 bg-white">
+        <div className="w-full max-w-[480px]">
+          {/* Mobile centered logo */}
+          <div className="flex justify-center mb-8 lg:hidden">
             <Link href="/">
-              <img src="/logo.png" alt="Commerce Gyan" className="h-[48px] w-auto object-contain" />
+              <img src="/logo.png" alt="Commerce Gyan Logo" className="h-[50px] w-auto object-contain" />
             </Link>
           </div>
 
-          <div className="mb-6 text-center md:text-left">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Create Account ✨</h2>
-            <p className="text-slate-400 text-[13px] font-semibold mt-1">Register as a new student</p>
+          <div className="mb-6 text-center lg:text-left">
+            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Create Account</h2>
+            <p className="text-slate-400 text-sm font-semibold mt-1.5">Register to start your learning journey</p>
+          </div>
+
+          {/* Sleek Step Indicator */}
+          <div className="mb-8 w-full">
+            <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
+              <span>{step === 1 ? "Step 1: Personal Info" : step === 2 ? "Step 2: Academic Info" : "Step 3: Setup Password"}</span>
+              <span>Step {step} of 3</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#1d4ed8] to-[#0ea5e9] transition-all duration-300"
+                style={{ width: `${(step / 3) * 100}%` }}
+              />
+            </div>
           </div>
 
           {error && (
-            <div className="mb-5 px-4 py-3.5 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-[13px] font-bold flex items-center gap-2.5 animate-pulse-soft">
+            <div className="mb-5 px-4 py-3.5 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-[13px] font-bold flex items-center gap-2.5">
               <span className="w-5 h-5 bg-rose-100 rounded-full flex items-center justify-center text-rose-500 text-[10px] shrink-0 font-extrabold">!</span>
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name Row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">First Name *</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="First name" 
-                  value={form.firstName}
-                  onChange={e => setForm({ ...form, firstName: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Last Name *</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="Last name" 
-                  value={form.lastName}
-                  onChange={e => setForm({ ...form, lastName: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-            </div>
+            
+            {/* STEP 1: PERSONAL DETAILS */}
+            {step === 1 && (
+              <div className="space-y-4 animate-slide-down">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">First Name</label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="John" 
+                      value={form.firstName}
+                      onChange={e => setForm({ ...form, firstName: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Last Name</label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="Doe" 
+                      value={form.lastName}
+                      onChange={e => setForm({ ...form, lastName: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Email Address *</label>
-              <input 
-                type="email" 
-                required 
-                placeholder="you@example.com" 
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                className={inputClass}
-              />
-            </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+                  <input 
+                    type="email" 
+                    required 
+                    placeholder="you@example.com" 
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Mobile Number *</label>
-              <input 
-                type="tel" 
-                required 
-                placeholder="10-digit mobile number" 
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                className={inputClass}
-              />
-            </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Mobile Phone</label>
+                  <input 
+                    type="tel" 
+                    required 
+                    placeholder="10-digit phone number" 
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
 
-            {/* Stream & Class */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Stream *</label>
-                <select 
-                  required 
-                  value={form.stream} 
-                  onChange={e => setForm({ ...form, stream: e.target.value, className: "" })}
-                  className={selectClass}
-                >
-                  <option value="">Select</option>
-                  {Object.keys(STREAMS).map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Class *</label>
-                <select 
-                  required 
-                  value={form.className} 
-                  onChange={e => setForm({ ...form, className: e.target.value })} 
-                  disabled={!form.stream}
-                  className={selectClass}
-                >
-                  <option value="">Select</option>
-                  {form.stream && STREAMS[form.stream].map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Password *</label>
-              <div className="relative">
-                <input 
-                  type={showPw ? "text" : "password"} 
-                  required 
-                  placeholder="Create a strong password"
-                  value={form.password} 
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  className={`${inputClass} pr-14`}
-                />
                 <button 
                   type="button" 
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 hover:text-[#0ea5e9] transition-colors cursor-pointer select-none"
+                  onClick={handleNext}
+                  className="w-full h-[56px] rounded-[14px] text-white text-sm font-black transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer mt-6 bg-gradient-to-r from-[#1d4ed8] to-[#0ea5e9]"
                 >
-                  {showPw ? "Hide" : "Show"}
+                  <span>Continue →</span>
                 </button>
               </div>
-            </div>
+            )}
 
-            {/* Terms checkbox */}
-            <label className="flex items-start gap-3 cursor-pointer py-1 select-none">
-              <input 
-                type="checkbox" 
-                checked={agreed} 
-                onChange={e => setAgreed(e.target.checked)}
-                className="mt-1 w-4 h-4 accent-[#0B4DDB] rounded border-slate-200" 
-              />
-              <span className="text-[12px] text-slate-500 font-semibold leading-relaxed">
-                I agree to receive communications from Commerce Gyan including updates, fee reminders, and announcements.
-              </span>
-            </label>
+            {/* STEP 2: ACADEMIC DETAILS */}
+            {step === 2 && (
+              <div className="space-y-4 animate-slide-down">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Select Stream</label>
+                  <select 
+                    required 
+                    value={form.stream} 
+                    onChange={e => setForm({ ...form, stream: e.target.value, className: "" })}
+                    className={selectClass}
+                  >
+                    <option value="">Choose Stream</option>
+                    {Object.keys(STREAMS).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
 
-            {/* Submit */}
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full h-[54px] rounded-xl text-white text-sm font-black transition-all duration-300 disabled:opacity-50 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer mt-6"
-              style={{ background: 'linear-gradient(135deg, #0B4DDB, #0ea5e9)' }}
-            >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Creating Account...</span>
-                </>
-              ) : (
-                <span>Create Account →</span>
-              )}
-            </button>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Select Class / Course</label>
+                  <select 
+                    required 
+                    value={form.className} 
+                    onChange={e => setForm({ ...form, className: e.target.value })} 
+                    disabled={!form.stream}
+                    className={selectClass}
+                  >
+                    <option value="">Choose Class</option>
+                    {form.stream && STREAMS[form.stream].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Residential Address</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="Village / Area / Town" 
+                    value={form.address}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="flex gap-4 mt-6">
+                  <button 
+                    type="button" 
+                    onClick={handleBack}
+                    className="flex-1 h-[56px] rounded-[14px] border border-slate-200 text-slate-500 hover:text-slate-700 bg-white font-black transition-all duration-300 text-sm flex items-center justify-center cursor-pointer"
+                  >
+                    ← Back
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={handleNext}
+                    className="flex-[2] h-[56px] rounded-[14px] text-white text-sm font-black transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-[#1d4ed8] to-[#0ea5e9]"
+                  >
+                    <span>Continue →</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: ACCOUNT SETUP */}
+            {step === 3 && (
+              <div className="space-y-4 animate-slide-down">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Password</label>
+                  <div className="relative">
+                    <input 
+                      type={showPw ? "text" : "password"} 
+                      required 
+                      placeholder="Create a strong password"
+                      value={form.password} 
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      className={`${inputClass} pr-14`}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPw(!showPw)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 hover:text-[#0ea5e9] transition-colors cursor-pointer select-none"
+                    >
+                      {showPw ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer py-1 select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={agreed} 
+                    onChange={e => setAgreed(e.target.checked)}
+                    className="mt-1 w-4 h-4 accent-[#1d4ed8] rounded border-slate-200" 
+                  />
+                  <span className="text-[12px] text-slate-500 font-semibold leading-relaxed">
+                    I agree to receive communications from Commerce Gyan including course updates, timetable schedules, and alerts.
+                  </span>
+                </label>
+
+                <div className="flex gap-4 mt-6">
+                  <button 
+                    type="button" 
+                    onClick={handleBack}
+                    className="flex-1 h-[56px] rounded-[14px] border border-slate-200 text-slate-500 hover:text-slate-700 bg-white font-black transition-all duration-300 text-sm flex items-center justify-center cursor-pointer"
+                  >
+                    ← Back
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="flex-[2] h-[56px] rounded-[14px] text-white text-sm font-black transition-all duration-300 disabled:opacity-50 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-[#1d4ed8] to-[#0ea5e9]"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Registering...</span>
+                      </>
+                    ) : (
+                      <span>Create Account ✓</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
           </form>
 
-          <p className="text-center text-[13px] text-slate-400 mt-6 font-semibold">
+          <p className="text-center text-sm text-slate-400 mt-6 font-semibold">
             Already on Commerce Gyan?{" "}
-            <Link href="/login" className="text-[#0B4DDB] font-black hover:text-[#0ea5e9] transition-colors">Sign In</Link>
+            <Link href="/login" className="text-[#1d4ed8] font-black hover:text-[#0ea5e9] transition-colors">Sign In</Link>
           </p>
 
           <p className="text-center text-[11px] text-slate-350 mt-6 font-semibold">
