@@ -111,7 +111,7 @@ export default function Login() {
 
       {/* LEFT PANEL — Split Screen Left (50% on Desktop) */}
       <div 
-        className="hidden lg:flex lg:w-1/2 relative text-white select-none flex-col justify-between p-12"
+        className="hidden lg:flex lg:w-1/2 relative text-white select-none flex-col justify-center p-12"
         style={{
           backgroundImage: `
             radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 35%),
@@ -121,17 +121,6 @@ export default function Login() {
           `
         }}
       >
-        {/* Logo at Top Right of the Left Panel */}
-        <div className="absolute" style={{ top: "40px", right: "50px" }}>
-          <Link href="/">
-            <img 
-              src="/logo.png" 
-              alt="Commerce Gyan Logo" 
-              className="w-[100px] h-auto object-contain invert mix-blend-screen opacity-95 transition-all duration-300 hover:scale-102" 
-            />
-          </Link>
-        </div>
-
         {/* Center illustration & copy (Vertically balanced and centered) */}
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-10 max-w-lg mx-auto">
           <div className="w-full max-w-[440px] transition-transform duration-500 hover:scale-[1.02]">
@@ -148,13 +137,24 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 text-left">
-          <p className="text-white/40 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
+        <div className="absolute bottom-6 left-12 text-left">
+          <p className="text-white/30 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
         </div>
       </div>
 
       {/* RIGHT PANEL — Split Screen Right (50% on Desktop, 100% on Mobile) */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 bg-white">
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 bg-white relative">
+        {/* Logo at Top Right Corner of Right Panel (Desktop only) */}
+        <div className="absolute hidden lg:block" style={{ top: "40px", right: "50px" }}>
+          <Link href="/">
+            <img 
+              src="/logo.png" 
+              alt="Commerce Gyan Logo" 
+              className="w-[100px] h-auto object-contain opacity-95 transition-all duration-300 hover:scale-102" 
+            />
+          </Link>
+        </div>
+
         <div className="w-full max-w-[480px]">
           {/* Mobile centered logo */}
           <div className="flex justify-center mb-8 lg:hidden">
