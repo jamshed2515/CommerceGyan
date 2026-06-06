@@ -14,15 +14,9 @@ export default function Footer() {
   if (isDashboard) return null;
 
   return (
-    <footer 
-      className="font-sans mt-auto" 
-      style={{ 
-        background: 'radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 35%), radial-gradient(circle at bottom right, rgba(255, 204, 0, 0.08), transparent 35%), linear-gradient(180deg, #f8fbff 0%, #eef6ff 45%, #e8f3ff 100%)',
-        borderTop: '1px solid rgba(59, 130, 246, 0.12)' 
-      }}
-    >
+    <footer className="border-t border-slate-200/60 font-sans mt-auto" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)' }}>
       {/* Top Footer Section: Multi-column Grid */}
-      <div className="max-w-7xl mx-auto px-6 pt-20 pb-10">
+      <div className="max-w-7xl mx-auto px-6 py-16 lg:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Column 1: Institute Info (lg:col-span-4) */}
           <div className="lg:col-span-4 space-y-6">
@@ -30,11 +24,11 @@ export default function Footer() {
               <img
                 src="/logo.png"
                 alt="Commerce Gyan Logo"
-                className="h-[62px] max-h-[62px] w-auto transition-all duration-300"
+                className="max-h-[58px] w-auto transition-all duration-300"
               />
             </Link>
-            <p className="text-[#4b5563] text-sm leading-[1.8] font-medium max-w-sm">
-              Commerce Gyan is dedicated to academic excellence, conceptual clarity, and career-focused learning for school, board, and professional commerce students.
+            <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-sm">
+              Commerce Gyan in Katrasgarh is the premier coaching institute dedicated to conceptual clarity, personal mentorship, and academic excellence in school, board, and professional courses.
             </p>
             {/* Social Media Links */}
             <div className="flex items-center gap-3.5 pt-1">
@@ -82,8 +76,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={`Follow on ${social.label}`}
-                  className="w-12 h-12 rounded-full bg-white/90 border border-white/50 text-slate-500 hover:text-[#00AEEF] hover:border-[#00AEEF]/30 shadow-[0_10px_25px_rgba(15,23,42,0.08)] hover:shadow-[0_18px_35px_rgba(15,23,42,0.12)] hover:-translate-y-1 flex items-center justify-center transition-all duration-300 cursor-pointer"
-                  style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+                  className="w-11 h-11 rounded-full bg-white border border-slate-200/80 text-slate-500 hover:text-[#00AEEF] hover:border-[#00AEEF]/30 shadow-sm hover:shadow-md hover:-translate-y-1 flex items-center justify-center transition-all duration-300 cursor-pointer"
                 >
                   {social.icon}
                 </a>
@@ -93,13 +86,10 @@ export default function Footer() {
 
           {/* Column 2: Quick Links (lg:col-span-2) */}
           <div className="lg:col-span-2 space-y-5">
-            <div>
-              <h4 className="font-bold text-[#0f2d62] text-[15px] tracking-[0.12em] uppercase">
-                Quick Links
-              </h4>
-              <div className="w-10 h-[3px] bg-[#ffd200] rounded-full mt-2"></div>
-            </div>
-            <ul className="space-y-3 flex flex-col">
+            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
+              Quick Links
+            </h4>
+            <ul className="space-y-2.5">
               {[
                 { label: "Home", href: "/" },
                 { label: "Courses", href: "/#programs" },
@@ -111,7 +101,7 @@ export default function Footer() {
                 <li key={i}>
                   <Link
                     href={link.href}
-                    className="text-[#475569] hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold text-xs transition-all duration-250 ease-out"
+                    className="text-gray-500 hover:text-[#00AEEF] font-bold text-xs transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -122,13 +112,10 @@ export default function Footer() {
 
           {/* Column 3: Programs (lg:col-span-3) */}
           <div className="lg:col-span-3 space-y-5">
-            <div>
-              <h4 className="font-bold text-[#0f2d62] text-[15px] tracking-[0.12em] uppercase">
-                Programs
-              </h4>
-              <div className="w-10 h-[3px] bg-[#ffd200] rounded-full mt-2"></div>
-            </div>
-            <ul className="space-y-3 flex flex-col">
+            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
+              Programs
+            </h4>
+            <ul className="space-y-2.5">
               {[
                 { label: "Class 11 Commerce", href: "/#programs" },
                 { label: "Class 12 Commerce", href: "/#programs" },
@@ -139,7 +126,7 @@ export default function Footer() {
                 <li key={i}>
                   <Link
                     href={prog.href}
-                    className="text-[#475569] hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold text-xs transition-all duration-250 ease-out"
+                    className="text-gray-500 hover:text-[#00AEEF] font-bold text-xs transition-colors"
                   >
                     {prog.label}
                   </Link>
@@ -150,13 +137,10 @@ export default function Footer() {
 
           {/* Column 4: Contact Info (lg:col-span-3) */}
           <div className="lg:col-span-3 space-y-5">
-            <div>
-              <h4 className="font-bold text-[#0f2d62] text-[15px] tracking-[0.12em] uppercase">
-                Contact Us
-              </h4>
-              <div className="w-10 h-[3px] bg-[#ffd200] rounded-full mt-2"></div>
-            </div>
-            <ul className="space-y-3.5 text-xs text-[#475569] font-medium leading-relaxed">
+            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
+              Contact Us
+            </h4>
+            <ul className="space-y-3.5 text-xs text-gray-500 font-medium leading-relaxed">
               <li className="flex gap-2">
                 <span className="text-[#00AEEF] text-sm font-bold">📍</span>
                 <span>
@@ -167,7 +151,7 @@ export default function Footer() {
                 <span className="text-[#00AEEF] text-sm font-bold">📞</span>
                 <a
                   href="tel:8271365450"
-                  className="hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold transition-all duration-250 ease-out"
+                  className="hover:text-[#00AEEF] font-bold transition-colors"
                 >
                   +91 82713 65450
                 </a>
@@ -176,7 +160,7 @@ export default function Footer() {
                 <span className="text-[#00AEEF] text-sm font-bold">✉️</span>
                 <a
                   href="mailto:info@commercegyan.com"
-                  className="hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold transition-all duration-250 ease-out"
+                  className="hover:text-[#00AEEF] font-bold transition-colors"
                 >
                   info@commercegyan.com
                 </a>
@@ -184,26 +168,17 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Copyright Bar */}
-      <div 
-        className="border-t border-blue-500/10" 
-        style={{
-          background: 'rgba(255, 255, 255, 0.55)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-          <p className="text-[#475569] text-xs font-semibold">
+        {/* Divider and Copyright Row */}
+        <div className="border-t border-slate-100/80 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <p className="text-gray-400 text-xs font-semibold">
             &copy; {new Date().getFullYear()} Commerce Gyan. All Rights Reserved.
           </p>
-          <div className="flex gap-6 text-[#475569] text-xs font-semibold">
-            <a href="#" className="hover:text-[#0ea5e9] transition-colors">
+          <div className="flex gap-4 text-gray-400 text-[11px] font-semibold">
+            <a href="#" className="hover:text-[#00AEEF] transition-colors">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-[#0ea5e9] transition-colors">
+            <a href="#" className="hover:text-[#00AEEF] transition-colors">
               Terms of Service
             </a>
           </div>
