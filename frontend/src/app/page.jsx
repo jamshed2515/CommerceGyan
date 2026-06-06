@@ -899,7 +899,7 @@ export default function Home() {
         </div>
       </section>
       {/* FAQ Section */}
-      <section className="py-12 pb-36 lg:py-24 lg:pb-24 bg-slate-50">
+      <section className="py-12 lg:py-24 bg-slate-50">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-16 space-y-3">
             <div className="inline-block bg-[#E6F4FE] text-[#00AEEF] px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider">
@@ -956,31 +956,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Sticky Admissions CTA Bar */}
-      <div className="fixed bottom-[88px] lg:bottom-6 left-4 right-4 lg:left-1/2 lg:-translate-x-1/2 lg:w-[calc(100%-3rem)] lg:max-w-7xl z-45 bg-[rgba(234,248,255,0.8)] backdrop-blur-[10px] border border-[rgba(135,206,250,0.15)] shadow-[0_4px_12px_rgba(135,206,250,0.06)] py-1.5 px-3 md:py-3 md:px-6 flex items-center justify-between animate-slide-down h-[46px] lg:h-[58px] rounded-[14px] lg:rounded-[18px]">
-        {/* Left Side: Single-line layout for admissions tag */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="text-xs lg:text-sm">🎓</span>
-          <span className="text-[10px] sm:text-[11px] lg:text-[13px] font-semibold text-[#1A3B70] uppercase tracking-wider whitespace-nowrap">
-            Admissions Open 2026-27
-          </span>
-          <p className="hidden md:inline-block text-xs text-gray-500 font-medium ml-3 border-l border-gray-200 pl-3">
-            Join the best commerce classes in Katrasgarh! Limited seats left.
-          </p>
-        </div>
 
-        {/* Right Side: Quick actions */}
-        <div className="flex items-center gap-2">
-          <a href="tel:8271365450" className="hidden sm:inline-block border border-gray-200/80 bg-white hover:bg-gray-50 text-[#1A3B70] font-bold text-[10px] lg:text-[11px] px-2.5 py-1 rounded-lg transition-colors">
-            📞 Call Support
-          </a>
-          <Link href="/signup">
-            <button className="bg-[#1A3B70] hover:bg-[#122A50] text-white font-bold text-[10px] lg:text-[11px] px-3 py-1 lg:px-4 lg:py-1.5 rounded-lg shadow-[0_2px_4px_rgba(26,59,112,0.08)] transition-all active:scale-95 cursor-pointer whitespace-nowrap">
-              Enquire Now
-            </button>
-          </Link>
-        </div>
-      </div>
       {/* Floating WhatsApp Button */}
       <WhatsAppButton />
     </main>
