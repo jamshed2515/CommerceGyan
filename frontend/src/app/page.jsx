@@ -957,29 +957,26 @@ export default function Home() {
       </section>
 
       {/* Sticky Admissions CTA Bar */}
-      <div className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-45 bg-[#1A3B70]/95 backdrop-blur-md border-t border-white/10 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] py-2 px-4 md:py-4 md:px-12 flex items-center justify-between text-white animate-slide-down h-[55px] lg:h-[70px]">
+      <div className="fixed bottom-[72px] lg:bottom-6 left-4 right-4 lg:left-1/2 lg:-translate-x-1/2 lg:w-[calc(100%-3rem)] lg:max-w-7xl z-45 bg-[#EAF8FF]/90 backdrop-blur-md border border-[#00AEEF]/20 shadow-[0_10px_30px_rgba(0,174,239,0.08)] py-2 px-4 md:py-3.5 md:px-8 flex items-center justify-between animate-slide-down h-[52px] lg:h-[65px] rounded-[16px] lg:rounded-[20px]">
         {/* Left Side: Single-line layout for admissions tag */}
         <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8CC63F] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8CC63F]"></span>
-          </span>
-          <span className="text-[11px] lg:text-sm font-black text-[#FFCC00] uppercase tracking-wider whitespace-nowrap">
+          <span className="text-sm lg:text-base">🎓</span>
+          <span className="text-[11px] lg:text-sm font-semibold text-[#1A3B70] uppercase tracking-wider whitespace-nowrap">
             Admissions Open 2026-27
           </span>
-          <p className="hidden md:inline-block text-xs text-white/70 font-semibold ml-2">
+          <p className="hidden md:inline-block text-xs text-gray-500 font-medium ml-3 border-l border-gray-200 pl-3">
             Join the best commerce classes in Katrasgarh! Limited seats left.
           </p>
         </div>
 
         {/* Right Side: Quick actions */}
-        <div className="flex items-center gap-2 lg:gap-3">
-          <a href="tel:8271365450" className="hidden sm:inline-block border border-white/20 hover:bg-white/10 font-bold text-xs px-4 py-2.5 rounded-lg transition-colors">
+        <div className="flex items-center gap-2">
+          <a href="tel:8271365450" className="hidden sm:inline-block border border-gray-200/80 bg-white hover:bg-gray-50 text-[#1A3B70] font-bold text-[11px] lg:text-xs px-3 py-1.5 rounded-lg lg:rounded-xl transition-colors">
             📞 Call Support
           </a>
           <Link href="/signup">
-            <button className="bg-[#FFCC00] hover:bg-[#FFD633] text-[#1A3B70] font-black text-[11px] lg:text-xs px-4 py-1.5 lg:px-5 lg:py-2.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap">
-              Book Seat Now
+            <button className="bg-[#1A3B70] hover:bg-[#122A50] text-white font-bold text-[11px] lg:text-xs px-4 py-1.5 lg:px-5 lg:py-2 rounded-lg lg:rounded-xl shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap">
+              Enquire Now
             </button>
           </Link>
         </div>
