@@ -15,6 +15,15 @@ export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [dbCourses, setDbCourses] = useState([]);
   const [dbAchievers, setDbAchievers] = useState([]);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     fetch(`${API}/api/announcements`)
@@ -136,7 +145,11 @@ export default function Home() {
       )}
       
       {/* Top Navbar with Glassmorphism */}
-      <nav className="sticky top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)] flex items-center justify-between px-6 h-[70px] lg:h-[80px]">
+      <nav className={`sticky top-0 w-full z-50 transition-all duration-300 flex items-center justify-between px-6 backdrop-blur-md ${
+        isScrolled 
+          ? "bg-white/90 border-b border-gray-200/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] h-[60px] lg:h-[70px]" 
+          : "bg-white/95 border-b border-gray-100/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)] h-[75px] lg:h-[80px]"
+      }`}>
         {/* Left Logo */}
         <div className="flex items-center flex-shrink-0">
           <Link href="/" className="flex items-center group">
@@ -145,7 +158,9 @@ export default function Home() {
               alt="Commerce Gyan Logo" 
               width={200} 
               height={55} 
-              className="object-contain max-h-[55px] w-auto group-hover:scale-102 transition-transform duration-200"
+              className={`object-contain w-auto group-hover:scale-102 transition-all duration-300 ${
+                isScrolled ? "max-h-[38px] lg:max-h-[45px]" : "max-h-[48px] lg:max-h-[55px]"
+              }`}
               priority
             />
           </Link>
@@ -222,7 +237,9 @@ export default function Home() {
 
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
-          <div className="absolute top-[70px] lg:top-[80px] left-0 w-full bg-white border-b border-gray-200 shadow-lg z-40 flex flex-col p-6 gap-4 lg:hidden animate-slide-down">
+          <div className={`absolute left-0 w-full bg-white border-b border-gray-200 shadow-lg z-40 flex flex-col p-6 gap-4 lg:hidden animate-slide-down transition-all duration-300 ${
+            isScrolled ? "top-[60px]" : "top-[75px] lg:top-[80px]"
+          }`}>
             <Link 
               href="#programs" 
               onClick={() => setIsMobileMenuOpen(false)}
@@ -940,20 +957,28 @@ export default function Home() {
       </section>
 
       {/* Sticky Admissions CTA Bar */}
-      <div className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-45 bg-[#1A3B70]/95 backdrop-blur-md border-t border-white/10 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] py-2.5 px-4 lg:py-4 lg:px-12 flex items-center justify-between text-white animate-slide-down">
-        <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-[#8CC63F] rounded-full animate-ping"></span>
-            <span className="text-xs md:text-sm font-black text-[#FFCC00] uppercase tracking-wider">Admissions Open 2026-27</span>
-          </div>
-          <p className="text-[10px] md:text-xs text-white/70 font-semibold">Join the best commerce classes in Katrasgarh! Limited seats left.</p>
+      <div className="fixed bottom-[56px] lg:bottom-0 left-0 right-0 z-45 bg-[#1A3B70]/95 backdrop-blur-md border-t border-white/10 shadow-[0_-8px_25px_rgba(0,0,0,0.15)] py-2 px-4 md:py-4 md:px-12 flex items-center justify-between text-white animate-slide-down h-[55px] lg:h-[70px]">
+        {/* Left Side: Single-line layout for admissions tag */}
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8CC63F] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8CC63F]"></span>
+          </span>
+          <span className="text-[11px] lg:text-sm font-black text-[#FFCC00] uppercase tracking-wider whitespace-nowrap">
+            Admissions Open 2026-27
+          </span>
+          <p className="hidden md:inline-block text-xs text-white/70 font-semibold ml-2">
+            Join the best commerce classes in Katrasgarh! Limited seats left.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Right Side: Quick actions */}
+        <div className="flex items-center gap-2 lg:gap-3">
           <a href="tel:8271365450" className="hidden sm:inline-block border border-white/20 hover:bg-white/10 font-bold text-xs px-4 py-2.5 rounded-lg transition-colors">
             📞 Call Support
           </a>
           <Link href="/signup">
-            <button className="bg-[#FFCC00] hover:bg-[#FFD633] text-[#1A3B70] font-black text-xs px-5 py-2.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer">
+            <button className="bg-[#FFCC00] hover:bg-[#FFD633] text-[#1A3B70] font-black text-[11px] lg:text-xs px-4 py-1.5 lg:px-5 lg:py-2.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap">
               Book Seat Now
             </button>
           </Link>
