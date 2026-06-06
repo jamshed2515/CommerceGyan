@@ -131,8 +131,8 @@ export default function Signup() {
     }
   };
 
-  const inputClass = "w-full h-[56px] px-4 rounded-[14px] border border-[#e5e7eb] bg-white text-sm text-gray-800 placeholder-slate-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300";
-  const selectClass = "w-full h-[56px] px-4 rounded-[14px] border border-[#e5e7eb] bg-white text-sm text-gray-800 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300 disabled:opacity-50 disabled:bg-slate-50";
+  const inputClass = "w-full h-[56px] px-4 rounded-[14px] border border-[#e5e7eb] bg-white text-sm text-gray-800 placeholder-slate-350 focus:border-[#2563eb] focus:ring-4 focus:ring-[#2563eb]/10 outline-none transition-all duration-300";
+  const selectClass = "w-full h-[56px] px-4 rounded-[14px] border border-[#e5e7eb] bg-white text-sm text-gray-800 focus:border-[#2563eb] focus:ring-4 focus:ring-[#2563eb]/10 outline-none transition-all duration-300 disabled:opacity-50 disabled:bg-slate-50";
 
   return (
     <main className="min-h-screen flex flex-col lg:flex-row font-[family-name:var(--font-mulish)] bg-white relative overflow-hidden">
@@ -155,46 +155,158 @@ export default function Signup() {
 
       {/* LEFT PANEL — Split Screen Left (50% on Desktop) */}
       <div 
-        className="hidden lg:flex lg:w-1/2 relative text-white select-none flex-col justify-center p-12"
+        className="hidden lg:flex lg:w-1/2 relative text-white select-none flex-col justify-center p-8 lg:p-12"
         style={{
           backgroundImage: `
             radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 35%),
             radial-gradient(circle at 80% 30%, rgba(255,255,255,0.06), transparent 35%),
             radial-gradient(circle at 50% 80%, rgba(255,255,255,0.05), transparent 40%),
-            linear-gradient(135deg, #0F2A66 0%, #153A8A 40%, #1E4ED8 100%)
+            linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #38BDF8 100%)
           `
         }}
       >
-        {/* Center illustration & copy (Vertically balanced and centered) */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-10 max-w-lg mx-auto">
-          <div className="w-full max-w-[440px] transition-transform duration-500 hover:scale-[1.02]">
-            <img src="/students_illustration.png" alt="Students studying" className="w-full h-auto object-contain" />
+        {/* Center illustration & copy (Vertically centered, clean spacing) */}
+        <div className="flex flex-col items-center justify-center text-center space-y-9 max-w-[500px] mx-auto pb-4 animate-fade-in">
+          
+          {/* Transparent Inline Vector Education Illustration */}
+          <div className="w-full flex justify-center max-w-[245px] transition-transform duration-500 hover:scale-[1.02]">
+            <svg viewBox="0 0 400 320" className="w-full h-auto object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Soft glow behind */}
+              <circle cx="200" cy="160" r="100" fill="url(#glow-grad)" opacity="0.12" />
+              
+              {/* Floating stars */}
+              <path d="M120 70L123 76L130 77L125 82L126 89L120 85L114 89L115 82L110 77L117 76L120 70Z" fill="#38BDF8" opacity="0.8" />
+              <path d="M280 230L282 234L287 235L283 239L284 244L280 241L276 244L277 239L273 235L278 234L280 230Z" fill="#38BDF8" opacity="0.6" />
+              
+              {/* Graduation Cap floating at the top */}
+              <g transform="translate(150, 40) scale(1.1)">
+                {/* Cap diamond */}
+                <path d="M45 15L85 30L45 45L5 30L45 15Z" fill="#FFFFFF" />
+                <path d="M45 15L85 30L45 45L5 30L45 15Z" stroke="#38BDF8" strokeWidth="2.5" strokeLinejoin="round" />
+                
+                {/* Cap base */}
+                <path d="M22 36.5V49C22 55 68 55 68 49V36.5" fill="none" stroke="#FFFFFF" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                
+                {/* Tassel */}
+                <path d="M45 30V48L58 55" stroke="#38BDF8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="58" cy="55" r="3.5" fill="#38BDF8" />
+              </g>
+
+              {/* Stack of books */}
+              <g transform="translate(110, 160)">
+                {/* Book 3 (Bottom) - Dark Blue */}
+                <rect x="10" y="50" width="160" height="22" rx="4" fill="#0F2A66" stroke="#FFFFFF" strokeWidth="2" />
+                <rect x="150" y="52" width="16" height="18" fill="#38BDF8" rx="2" />
+                
+                {/* Book 2 (Middle) - Sky Blue */}
+                <rect x="22" y="26" width="140" height="22" rx="4" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="2" />
+                <rect x="142" y="28" width="16" height="18" fill="#FFFFFF" rx="2" />
+                
+                {/* Book 1 (Top) - White/Soft */}
+                <rect x="35" y="2" width="115" height="22" rx="4" fill="#FFFFFF" stroke="#38BDF8" strokeWidth="2" />
+                <rect x="130" y="4" width="16" height="18" fill="#0F2A66" rx="2" />
+              </g>
+
+              {/* Stylized Modern Laptop next to books */}
+              <g transform="translate(210, 195) scale(0.9)">
+                {/* Laptop Screen */}
+                <rect x="10" y="10" width="80" height="52" rx="6" fill="#0F2A66" stroke="#FFFFFF" strokeWidth="2.5" />
+                <rect x="15" y="15" width="70" height="42" rx="3" fill="url(#screen-grad)" />
+                {/* Code lines on screen */}
+                <line x1="22" y1="22" x2="42" y2="22" stroke="#38BDF8" strokeWidth="3" strokeLinecap="round" />
+                <line x1="22" y1="30" x2="62" y2="30" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.8" />
+                <line x1="22" y1="38" x2="52" y2="38" stroke="#38BDF8" strokeWidth="3" strokeLinecap="round" />
+                
+                {/* Laptop Keyboard / Base */}
+                <path d="M2 62H98L104 70H-4L2 62Z" fill="#FFFFFF" />
+                <path d="M2 62H98L104 70H-4L2 62Z" stroke="#FFFFFF" strokeWidth="2.5" strokeLinejoin="round" />
+                <line x1="38" y1="66" x2="62" y2="66" stroke="#0F2A66" strokeWidth="3" strokeLinecap="round" />
+              </g>
+
+              {/* Floating Lightbulb */}
+              <g transform="translate(70, 90) scale(0.85)">
+                <circle cx="25" cy="25" r="22" fill="#FFFFFF" opacity="0.1" />
+                {/* Bulb thread */}
+                <path d="M20 38H30M22 42H28" stroke="#38BDF8" strokeWidth="2.5" strokeLinecap="round" />
+                {/* Bulb outline */}
+                <path d="M15 26C15 17.5 35 17.5 35 26C35 31 29 33 27 36H23C21 33 15 31 15 26Z" stroke="#38BDF8" strokeWidth="2.5" strokeLinejoin="round" fill="#FFFFFF" />
+                {/* Glow lines */}
+                <line x1="25" y1="8" x2="25" y2="13" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
+                <line x1="10" y1="18" x2="14" y2="21" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
+                <line x1="40" y1="18" x2="36" y2="21" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
+              </g>
+
+              {/* Floating Globe */}
+              <g transform="translate(260, 95) scale(0.8)">
+                <circle cx="25" cy="25" r="20" stroke="#FFFFFF" strokeWidth="2.5" opacity="0.8" />
+                {/* Latitudes & Longitudes */}
+                <path d="M25 5C25 5 31 12 31 25C31 38 25 45 25 45M25 5C25 5 19 12 19 25C19 38 25 45 25 45" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.6" />
+                <line x1="5" y1="25" x2="45" y2="25" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.6" />
+              </g>
+
+              <defs>
+                <linearGradient id="glow-grad" x1="200" y1="60" x2="200" y2="260" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#38BDF8" />
+                  <stop offset="1" stopColor="#2563EB" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="screen-grad" x1="50" y1="15" x2="50" y2="57" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#1e3a8a" />
+                  <stop offset="1" stopColor="#0f172a" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+
+          <div className="space-y-3.5">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
               Empowering Future Leaders
             </h1>
-            <p className="text-white/70 text-[15px] font-semibold leading-relaxed max-w-sm mx-auto">
+            <p className="text-white/75 text-[14px] font-semibold leading-relaxed max-w-[450px] mx-auto">
               Join Commerce Gyan and unlock expert guidance, structured learning, and career-focused education.
             </p>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="absolute bottom-6 left-12 text-left">
-          <p className="text-white/30 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
+          {/* Feature Highlights */}
+          <div className="w-full max-w-[420px] text-left space-y-4 pt-6 border-t border-white/15">
+            {[
+              {
+                title: "Expert Faculty",
+                desc: "Mentored by experienced educators and subject specialists"
+              },
+              {
+                title: "Professional Course Preparation",
+                desc: "Structured preparation for professional exams"
+              },
+              {
+                title: "Personalized Mentorship",
+                desc: "Individual guidance and academic support"
+              }
+            ].map((feat, idx) => (
+              <div key={idx} className="flex items-start gap-3.5">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-white shrink-0 mt-0.5">
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="text-[13.5px] font-bold text-white tracking-wide">{feat.title}</h3>
+                  <p className="text-white/65 text-xs font-semibold mt-0.5 leading-relaxed">{feat.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* RIGHT PANEL — Split Screen Right (50% on Desktop, 100% on Mobile) */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 bg-white relative">
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-8 lg:py-10 bg-white relative">
         {/* Logo at Top Right Corner of Right Panel (Desktop only) */}
-        <div className="absolute hidden lg:block" style={{ top: "40px", right: "50px" }}>
+        <div className="absolute hidden lg:block" style={{ top: "24px", right: "32px" }}>
           <Link href="/">
             <img 
               src="/logo.png" 
               alt="Commerce Gyan Logo" 
-              className="w-[100px] h-auto object-contain opacity-95 transition-all duration-300 hover:scale-102" 
+              className="w-[125px] h-auto object-contain opacity-95 transition-all duration-300 hover:scale-102" 
             />
           </Link>
         </div>
