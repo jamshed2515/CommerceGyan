@@ -154,24 +154,38 @@ export default function Signup() {
       )}
 
       {/* LEFT PANEL — Split Screen Left (50% on Desktop) */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-[#00AEEF] text-white select-none flex-col justify-between p-12">
-        {/* Logo at Top Left */}
-        <div className="relative z-10 text-left">
+      <div 
+        className="hidden lg:flex lg:w-1/2 relative text-white select-none flex-col justify-between p-12"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 35%),
+            radial-gradient(circle at 80% 30%, rgba(255,255,255,0.06), transparent 35%),
+            radial-gradient(circle at 50% 80%, rgba(255,255,255,0.05), transparent 40%),
+            linear-gradient(135deg, #0F2A66 0%, #153A8A 40%, #1E4ED8 100%)
+          `
+        }}
+      >
+        {/* Logo at Top Right of the Left Panel */}
+        <div className="absolute" style={{ top: "40px", right: "50px" }}>
           <Link href="/">
-            <img src="/logo.png" alt="Commerce Gyan Logo" className="h-[46px] w-auto object-contain invert mix-blend-screen opacity-95" />
+            <img 
+              src="/logo.png" 
+              alt="Commerce Gyan Logo" 
+              className="w-[100px] h-auto object-contain invert mix-blend-screen opacity-95 transition-all duration-300 hover:scale-102" 
+            />
           </Link>
         </div>
 
-        {/* Center illustration & copy */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 max-w-md mx-auto">
-          <div className="w-full max-w-[340px]">
+        {/* Center illustration & copy (Vertically balanced and centered) */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-10 max-w-lg mx-auto">
+          <div className="w-full max-w-[440px] transition-transform duration-500 hover:scale-[1.02]">
             <img src="/students_illustration.png" alt="Students studying" className="w-full h-auto object-contain" />
           </div>
-          <div className="space-y-3">
-            <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+          <div className="space-y-4">
+            <h1 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
               Empowering Future Leaders
             </h1>
-            <p className="text-white/80 text-[14px] font-semibold leading-relaxed max-w-sm mx-auto">
+            <p className="text-white/70 text-[15px] font-semibold leading-relaxed max-w-sm mx-auto">
               Join Commerce Gyan and unlock expert guidance, structured learning, and career-focused education.
             </p>
           </div>
