@@ -103,10 +103,10 @@ export default function Home() {
 
   const defaultAchievers = [
     { name: 'Pariniti', score: '91.2%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/pariniti.png' },
-    { name: 'Kishore', score: '89.8%', course: 'CA Foundation', year: '2025', imageUrl: '/achievers/kishore.png' },
+    { name: 'Kishore', score: '89.8%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/kishore.png' },
     { name: 'Rinki', score: '89%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/rinki.png' },
     { name: 'Subhadra', score: '87.4%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/subhadra.png' },
-    { name: 'Uday', score: '85.4%', course: 'Class 10 Boards', year: '2025', imageUrl: '/achievers/uday.png' }
+    { name: 'Uday', score: '85.4%', course: 'Class 12 Boards', year: '2025', imageUrl: '/achievers/uday.png' }
   ];
 
   const displayAchievers = dbAchievers.length > 0 ? dbAchievers : defaultAchievers;
