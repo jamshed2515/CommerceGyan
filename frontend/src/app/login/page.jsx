@@ -1,7 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import API from "@/lib/api";
 
@@ -12,166 +11,296 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
+  };
+
+  // Redirect check on mount for already logged-in users
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userStr = localStorage.getItem("user");
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role === "admin") {
+          router.push("/admin");
+        } else if (user.role === "teacher") {
+          router.push("/teacher");
+        } else if (user.role === "student") {
+          router.push("/dashboard");
+        }
+      } catch {
+        localStorage.clear();
+      }
+    }
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); setLoading(true);
+    setError(""); 
+    setLoading(true);
     try {
       const res = await fetch(`${API}/api/auth/login`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.message || "Login failed"); setLoading(false); return; }
-      if (data.user.role === "admin") { setError("Use the Admin Login page for admin access."); setLoading(false); return; }
-      if (role === "teacher" && data.user.role !== "teacher") { setError("This account is not a teacher account."); setLoading(false); return; }
-      if (role === "student" && data.user.role !== "student") { setError("This account is not a student account."); setLoading(false); return; }
+      if (!res.ok) { 
+        showToast(data.message || "Login failed", "error"); 
+        setError(data.message || "Login failed");
+        setLoading(false); 
+        return; 
+      }
+      if (data.user.role === "admin") { 
+        showToast("Use the Admin Login portal.", "error");
+        setError("Use the Admin Login page for admin access."); 
+        setLoading(false); 
+        return; 
+      }
+      if (role === "teacher" && data.user.role !== "teacher") { 
+        showToast("This account is not a teacher account.", "error");
+        setError("This account is not a teacher account."); 
+        setLoading(false); 
+        return; 
+      }
+      if (role === "student" && data.user.role !== "student") { 
+        showToast("This account is not a student account.", "error");
+        setError("This account is not a student account."); 
+        setLoading(false); 
+        return; 
+      }
+
+      showToast("Login successful! Redirecting...", "success");
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      router.push(data.user.role === "teacher" ? "/teacher" : "/dashboard");
-    } catch { setError("Server error. Please try again."); setLoading(false); }
+      
+      setTimeout(() => {
+        router.push(data.user.role === "teacher" ? "/teacher" : "/dashboard");
+      }, 800);
+    } catch { 
+      showToast("Server error. Please try again.", "error");
+      setError("Server error. Please try again."); 
+      setLoading(false); 
+    }
   };
 
-  return (
-    <main className="min-h-screen flex font-[family-name:var(--font-mulish)]">
-      {/* LEFT — Branding Panel */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col justify-between"
-        style={{ background: 'linear-gradient(160deg, #0F172A 0%, #1E3A5F 40%, #0B4DDB 100%)' }}>
-        {/* Decorative circles */}
-        <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/5 rounded-full" />
-        <div className="absolute bottom-32 -left-16 w-56 h-56 bg-[#0EA5E9]/10 rounded-full" />
-        <div className="absolute top-1/2 right-10 w-32 h-32 bg-[#0B4DDB]/20 rounded-full" />
+  const inputClass = "w-full h-[54px] px-4 rounded-xl border border-slate-200 bg-white text-sm text-gray-800 placeholder-slate-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300";
 
-        <div className="relative z-10 px-10 pt-10">
+  return (
+    <main className="min-h-screen flex font-[family-name:var(--font-mulish)] relative overflow-hidden bg-white">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes floatSlow {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-20px) scale(1.05); }
+        }
+        @keyframes floatMid {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-15px) scale(0.95); }
+        }
+        @keyframes floatFast {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float-slow {
+          animation: floatSlow 8s ease-in-out infinite;
+        }
+        .animate-float-mid {
+          animation: floatMid 6s ease-in-out infinite;
+        }
+        .animate-float-fast {
+          animation: floatFast 4s ease-in-out infinite;
+        }
+      `}} />
+
+      {/* SUCCESS / ERROR TOAST */}
+      {toast.show && (
+        <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] border transition-all duration-300 ${
+          toast.type === "success" 
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+            : "bg-rose-50 border-rose-200 text-rose-800"
+        }`}>
+          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+            toast.type === "success" ? "bg-emerald-200 text-emerald-800" : "bg-rose-200 text-rose-800"
+          }`}>
+            {toast.type === "success" ? "✓" : "!"}
+          </span>
+          <span className="text-[13px] font-bold">{toast.message}</span>
+        </div>
+      )}
+
+      {/* LEFT — Branding Panel */}
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 text-white select-none">
+        {/* Animated background bubbles */}
+        <div className="absolute top-1/4 left-1/4 w-36 h-36 bg-white/5 rounded-full blur-2xl animate-float-slow" />
+        <div className="absolute bottom-1/4 right-1/4 w-52 h-52 bg-[#0ea5e9]/10 rounded-full blur-3xl animate-float-mid" />
+        <div className="absolute top-12 right-12 w-28 h-28 bg-indigo-500/10 rounded-full blur-xl animate-float-fast" />
+
+        {/* Logo */}
+        <div className="relative z-10">
           <Link href="/">
-            <Image src="/logo.png" alt="Commerce Gyan" width={180} height={50} className="object-contain max-h-[50px] w-auto brightness-0 invert" priority />
+            <div className="bg-white/95 px-5 py-2.5 rounded-2xl inline-block shadow-md hover:bg-white transition-colors duration-200">
+              <img src="/logo.png" alt="Commerce Gyan" className="h-8 w-auto object-contain" />
+            </div>
           </Link>
         </div>
 
-        <div className="relative z-10 px-10 flex-1 flex flex-col justify-center">
-          <h1 className="text-[32px] font-black text-white leading-tight mb-4">
-            Learn. Grow.<br />
-            <span className="text-[#0EA5E9]">Succeed.</span>
+        {/* Dynamic Showcase Content */}
+        <div className="relative z-10 flex-1 flex flex-col justify-center max-w-sm mx-auto">
+          <span className="text-xs font-black text-[#0ea5e9] tracking-widest uppercase mb-3 block">Premier Commerce Coaching</span>
+          <h1 className="text-4xl font-black leading-[1.15] tracking-tight mb-8">
+            Empowering Future <br />
+            Commerce <span className="bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8] bg-clip-text text-transparent">Leaders</span>
           </h1>
-          <p className="text-blue-200/80 text-[14px] leading-relaxed mb-8 max-w-sm">
-            Bihar&apos;s most trusted coaching institute for Commerce education. Expert faculty, proven results, and personalized attention for every student.
-          </p>
-
-          {/* Stats */}
-          <div className="flex gap-3">
+          
+          {/* Bullets with icons */}
+          <div className="space-y-5">
             {[
-              { val: "500+", label: "Students" },
-              { val: "20+", label: "Courses" },
-              { val: "7+", label: "Years Exp." },
-            ].map((s) => (
-              <div key={s.label} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-3 text-center flex-1">
-                <p className="text-white text-xl font-black">{s.val}</p>
-                <p className="text-blue-200/70 text-[11px] font-bold mt-0.5">{s.label}</p>
+              { text: "98.2% Board Pass Rate", desc: "Consistently delivering top district ranks" },
+              { text: "150+ CA & Board Toppers", desc: "Alumni studying at top universities and clearing CA foundation" },
+              { text: "Expert Faculty Team", desc: "Mentored by NET qualified and post-graduate teachers" },
+              { text: "Career-Focused Learning", desc: "Conceptual clarity and personal workspace tracking" }
+            ].map((b, i) => (
+              <div key={i} className="flex gap-4 items-start group">
+                <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm group-hover:bg-[#0ea5e9]/20 transition-colors shrink-0">✨</span>
+                <div>
+                  <h4 className="font-extrabold text-white text-[15px] leading-tight">{b.text}</h4>
+                  <p className="text-blue-200/60 text-[12px] mt-0.5 font-medium">{b.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 px-10 pb-6">
-          <p className="text-blue-300/50 text-[11px] font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
+        {/* Footer */}
+        <div className="relative z-10">
+          <p className="text-blue-300/40 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
         </div>
       </div>
 
       {/* RIGHT — Login Form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-8 bg-[#FAFBFC]">
-        <div className="w-full max-w-[400px]">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-slate-50/50">
+        <div className="w-full max-w-[400px] bg-white rounded-3xl border border-slate-100 shadow-[0_12px_40px_rgba(15,23,42,0.04)] p-8 md:p-10">
           {/* Mobile logo */}
           <div className="flex justify-center mb-6 lg:hidden">
-            <Link href="/"><Image src="/logo.png" alt="Commerce Gyan" width={180} height={50} className="object-contain max-h-[50px] w-auto" priority /></Link>
+            <Link href="/">
+              <img src="/logo.png" alt="Commerce Gyan" className="h-[48px] w-auto object-contain" />
+            </Link>
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-[24px] font-black text-[#0F172A]">Welcome Back 👋</h2>
-            <p className="text-gray-400 text-[13px] font-medium mt-1">Sign in to access your dashboard</p>
+          <div className="mb-6 text-center md:text-left">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Welcome Back 👋</h2>
+            <p className="text-slate-400 text-[13px] font-semibold mt-1">Sign in to access your dashboard</p>
           </div>
 
-          {/* Role switch */}
-          <div className="flex bg-[#F1F5F9] rounded-2xl p-1 mb-6 border border-gray-200/50">
-            {[{ key: "student", label: "🎓 Student", emoji: "" }, { key: "teacher", label: "👨‍🏫 Teacher", emoji: "" }].map(r => (
-              <button key={r.key} onClick={() => { setRole(r.key); setError(""); setForm({ email: "", password: "" }); }}
-                className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${
+          {/* Role switch tabs */}
+          <div className="flex bg-slate-100 rounded-2xl p-1 mb-6 border border-slate-200/40">
+            {[
+              { key: "student", label: "🎓 Student" }, 
+              { key: "teacher", label: "👨‍🏫 Teacher" }
+            ].map(r => (
+              <button 
+                key={r.key} 
+                type="button"
+                onClick={() => { setRole(r.key); setError(""); setForm({ email: "", password: "" }); }}
+                className={`flex-1 py-2.5 rounded-xl text-[13px] font-black transition-all duration-200 cursor-pointer ${
                   role === r.key
-                    ? "bg-white text-[#0B4DDB] shadow-[0_2px_8px_rgba(11,77,219,0.12)] border border-[#0B4DDB]/10"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}>
+                    ? "bg-white text-[#0B4DDB] shadow-[0_2px_8px_rgba(15,23,42,0.05)] border border-slate-100"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
                 {r.label}
               </button>
             ))}
           </div>
 
           {error && (
-            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-[13px] font-semibold flex items-center gap-2">
-              <span className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center text-red-500 text-[10px] shrink-0">!</span>
+            <div className="mb-5 px-4 py-3.5 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-[13px] font-bold flex items-center gap-2.5 animate-pulse-soft">
+              <span className="w-5 h-5 bg-rose-100 rounded-full flex items-center justify-center text-rose-500 text-[10px] shrink-0 font-extrabold">!</span>
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
-              <input type="email" required placeholder="you@example.com" value={form.email}
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+              <input 
+                type="email" 
+                required 
+                placeholder="you@example.com" 
+                value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 focus:border-[#0B4DDB] focus:ring-4 focus:ring-[#0B4DDB]/10 outline-none transition-all duration-200"
+                className={inputClass}
               />
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">Password</label>
-                <button type="button" className="text-[12px] text-[#0B4DDB] font-semibold hover:text-[#0EA5E9] transition-colors">Forgot?</button>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                <button type="button" className="text-xs text-[#0B4DDB] font-extrabold hover:text-[#0EA5E9] transition-colors">Forgot?</button>
               </div>
               <div className="relative">
-                <input type={showPw ? "text" : "password"} required placeholder="••••••••"
-                  value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-300 focus:border-[#0B4DDB] focus:ring-4 focus:ring-[#0B4DDB]/10 outline-none transition-all duration-200 pr-14"
+                <input 
+                  type={showPw ? "text" : "password"} 
+                  required 
+                  placeholder="••••••••"
+                  value={form.password} 
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  className={`${inputClass} pr-14`}
                 />
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 hover:text-[#0B4DDB] bg-gray-50 px-2.5 py-1 rounded-lg transition-colors border border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 hover:text-[#0ea5e9] transition-colors cursor-pointer select-none"
+                >
                   {showPw ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
 
-            <button type="submit" disabled={loading}
-              className="w-full py-3.5 rounded-xl text-white text-[14px] font-black transition-all duration-200 disabled:opacity-50 shadow-[0_4px_14px_rgba(11,77,219,0.3)] hover:shadow-[0_6px_20px_rgba(11,77,219,0.4)] hover:-translate-y-0.5 active:translate-y-0"
-              style={{ background: 'linear-gradient(135deg, #0B4DDB, #0EA5E9)' }}>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full h-[54px] rounded-xl text-white text-sm font-black transition-all duration-300 disabled:opacity-50 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer mt-6"
+              style={{ background: 'linear-gradient(135deg, #0B4DDB, #0ea5e9)' }}
+            >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
+                <>
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
-                </span>
-              ) : "Sign In →"}
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <span>Sign In →</span>
+              )}
             </button>
           </form>
 
           {role === "student" && (
-            <p className="text-center text-[13px] text-gray-400 mt-5 font-medium">
+            <p className="text-center text-[13px] text-slate-400 mt-6 font-semibold">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-[#0B4DDB] font-bold hover:text-[#0EA5E9] transition-colors">Create Account</Link>
+              <Link href="/signup" className="text-[#0B4DDB] font-black hover:text-[#0ea5e9] transition-colors">Create Account</Link>
             </p>
           )}
           {role === "teacher" && (
-            <p className="text-center text-[12px] text-gray-400 mt-5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 font-medium">
+            <p className="text-center text-[12px] text-slate-400 mt-6 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 font-semibold leading-relaxed">
               ℹ️ Teacher accounts are created by the institute admin.
             </p>
           )}
 
-          <div className="mt-5 flex items-center justify-center gap-3">
-            <div className="h-px bg-gray-200 flex-1" />
-            <Link href="/admin/login" className="text-[11px] text-gray-400 hover:text-[#0B4DDB] font-semibold transition-colors whitespace-nowrap">
+          <div className="mt-6 flex items-center justify-center gap-4">
+            <div className="h-px bg-slate-100 flex-1" />
+            <Link href="/admin/login" className="text-xs text-slate-400 hover:text-[#0B4DDB] font-extrabold transition-colors whitespace-nowrap">
               🔐 Admin Login
             </Link>
-            <div className="h-px bg-gray-200 flex-1" />
+            <div className="h-px bg-slate-100 flex-1" />
           </div>
 
-          <p className="text-center text-[11px] text-gray-300 mt-6 font-medium">
+          <p className="text-center text-[11px] text-slate-350 mt-6 font-semibold">
             By continuing, you agree to Commerce Gyan&apos;s{" "}
-            <span className="text-gray-400">Privacy Policy</span>
+            <span className="text-slate-400">Privacy Policy</span>
           </p>
         </div>
       </div>

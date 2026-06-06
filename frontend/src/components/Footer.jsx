@@ -5,13 +5,17 @@ import { usePathname } from "next/navigation";
 export default function Footer() {
   const pathname = usePathname();
 
-  // Hide the footer on admin, teacher, and user dashboard pages
-  const isDashboard =
+  // Hide the footer on admin, teacher, dashboard, and authentication pages
+  const isDashboardOrAuth =
     pathname?.startsWith("/admin") ||
     pathname?.startsWith("/dashboard") ||
-    pathname?.startsWith("/teacher");
+    pathname?.startsWith("/teacher") ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
 
-  if (isDashboard) return null;
+  if (isDashboardOrAuth) return null;
 
   return (
     <footer className="border-t border-slate-200/60 font-sans mt-auto" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)' }}>
