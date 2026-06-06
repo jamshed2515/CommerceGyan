@@ -404,7 +404,7 @@ export default function Home() {
 
             {/* Floating Card 1: Top Performing Students (Evergreen achievement card, 10-15% reduced on desktop, compact on mobile) */}
             <div 
-              className="absolute bottom-4 left-2 lg:bottom-10 lg:-left-8 flex items-center gap-2.5 lg:gap-3 rounded-[16px] lg:rounded-[20px] animate-float z-30 w-[190px] h-[52px] lg:w-[240px] lg:h-[68px] px-2.5 lg:px-4 py-2 lg:py-3.5"
+              className="absolute bottom-4 left-2 lg:bottom-12 lg:left-8 flex items-center gap-2.5 lg:gap-3 rounded-[16px] lg:rounded-[20px] animate-float z-30 w-[190px] h-[52px] lg:w-[240px] lg:h-[68px] px-2.5 lg:px-4 py-2 lg:py-3.5"
               style={{
                 background: 'rgba(255, 255, 255, 0.75)',
                 backdropFilter: 'blur(12px)',
@@ -422,7 +422,7 @@ export default function Home() {
 
             {/* Floating Card 2: CA Foundation Prep (10-15% reduced on desktop, compact on mobile) */}
             <div 
-              className="absolute top-4 right-2 lg:top-12 lg:-right-4 flex items-center gap-2.5 lg:gap-3 rounded-[16px] lg:rounded-[20px] animate-float z-30 [animation-delay:2s] w-[190px] h-[52px] lg:w-[230px] lg:h-[64px] px-2.5 lg:px-3.5 py-2 lg:py-3"
+              className="absolute top-4 right-2 lg:top-16 lg:right-8 flex items-center gap-2.5 lg:gap-3 rounded-[16px] lg:rounded-[20px] animate-float z-30 [animation-delay:2s] w-[190px] h-[52px] lg:w-[230px] lg:h-[64px] px-2.5 lg:px-3.5 py-2 lg:py-3"
               style={{
                 background: 'rgba(255, 255, 255, 0.75)',
                 backdropFilter: 'blur(12px)',

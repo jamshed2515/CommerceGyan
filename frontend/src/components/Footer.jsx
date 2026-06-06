@@ -14,9 +14,15 @@ export default function Footer() {
   if (isDashboard) return null;
 
   return (
-    <footer className="border-t border-slate-200/60 font-sans mt-auto" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)' }}>
+    <footer 
+      className="font-sans mt-auto" 
+      style={{ 
+        background: 'radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 35%), radial-gradient(circle at bottom right, rgba(255, 204, 0, 0.08), transparent 35%), linear-gradient(180deg, #f8fbff 0%, #eef6ff 45%, #e8f3ff 100%)',
+        borderTop: '1px solid rgba(59, 130, 246, 0.12)' 
+      }}
+    >
       {/* Top Footer Section: Multi-column Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-16 lg:py-20">
+      <div className="max-w-7xl mx-auto px-6 pt-20 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Column 1: Institute Info (lg:col-span-4) */}
           <div className="lg:col-span-4 space-y-6">
@@ -24,11 +30,11 @@ export default function Footer() {
               <img
                 src="/logo.png"
                 alt="Commerce Gyan Logo"
-                className="max-h-[58px] w-auto transition-all duration-300"
+                className="h-[62px] max-h-[62px] w-auto transition-all duration-300"
               />
             </Link>
-            <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-sm">
-              Commerce Gyan in Katrasgarh is the premier coaching institute dedicated to conceptual clarity, personal mentorship, and academic excellence in school, board, and professional courses.
+            <p className="text-[#4b5563] text-sm leading-[1.8] font-medium max-w-sm">
+              Commerce Gyan is dedicated to academic excellence, conceptual clarity, and career-focused learning for school, board, and professional commerce students.
             </p>
             {/* Social Media Links */}
             <div className="flex items-center gap-3.5 pt-1">
@@ -38,7 +44,7 @@ export default function Footer() {
                   href: "https://facebook.com",
                   icon: (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M22 12c0-5.52-4.48-10-10-10S2c4.48-2 10-2c4.9 0 8.93 3.51 9.77 8.16v-6.93H9.76V12h2.2v6.86H9.76v2.11H12v-6.97h2.2l.33-2.22H12v-1.42c0-.64.18-1.08 1.1-1.08h1.18V7.5c-.2-.03-.9-.09-1.72-.09-1.7 0-2.87 1.04-2.87 2.96v1.66H7.72v2.22h1.99V22c5.52 0 10-4.48 10-10z" />
+                      <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
                     </svg>
                   ),
                 },
@@ -65,7 +71,7 @@ export default function Footer() {
                   href: "https://wa.me/918271365450",
                   icon: (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 11.953.01c3.179 0 6.166 1.237 8.413 3.484 2.247 2.247 3.481 5.233 3.48 8.413-.003 6.557-5.338 11.892-11.893 11.892-2.002 0-3.969-.508-5.717-1.478L0 24zm6.305-1.654a9.88 9.88 0 005.683 1.448h.005c5.454 0 9.888-4.434 9.89-9.889a9.82 9.82 0 00-2.897-6.992 9.82 9.82 0 00-6.992-2.894C5.495.018.157 5.352.155 11.808c-.001 2.096.547 4.142 1.588 5.945L.745 22.37l5.617-1.478zM17.47 14.38c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+                      <path d="M12.012 2c-5.506 0-9.989 4.478-9.989 9.984a9.96 9.96 0 001.37 5.054L2 22l5.077-1.332a9.936 9.936 0 004.93 1.302h.005c5.507 0 9.99-4.478 9.99-9.985 0-2.667-1.04-5.176-2.93-7.065A9.925 9.925 0 0012.012 2zm5.47 14.056c-.3.15-1.774.877-2.046.977-.272.1-.47.15-.668-.15-.198-.3-.767-.976-.94-1.175-.173-.2-.347-.225-.647-.075-.3.15-1.266.467-2.41 1.485-.89.795-1.492 1.779-1.666 2.079-.173.3-.018.462.13.61.135.134.3.349.45.524.15.175.2.299.3.5.1.2.05.374-.025.524-.075.15-.668 1.61-1.11 2.685-.246.596-.495.516-.678.507-.173-.008-.37-.01-.57-.01-.197 0-.518.074-.789.373-.272.3-1.04 1.022-1.04 2.492 0 1.47 1.07 2.89 1.22 3.09.15.2 2.102 3.21 5.093 4.5 1.185.51 1.938.697 2.486.772.71.099 1.36.05 1.875-.025.572-.085 1.774-.724 2.022-1.42.247-.699.247-1.296.173-1.42-.074-.124-.272-.2-.572-.35z" />
                     </svg>
                   ),
                 },
@@ -76,7 +82,8 @@ export default function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={`Follow on ${social.label}`}
-                  className="w-11 h-11 rounded-full bg-white border border-slate-200/80 text-slate-500 hover:text-[#00AEEF] hover:border-[#00AEEF]/30 shadow-sm hover:shadow-md hover:-translate-y-1 flex items-center justify-center transition-all duration-300 cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-white/90 border border-white/50 text-slate-500 hover:text-[#00AEEF] hover:border-[#00AEEF]/30 shadow-[0_10px_25px_rgba(15,23,42,0.08)] hover:shadow-[0_18px_35px_rgba(15,23,42,0.12)] hover:-translate-y-1 flex items-center justify-center transition-all duration-300 cursor-pointer"
+                  style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
                 >
                   {social.icon}
                 </a>
@@ -86,10 +93,13 @@ export default function Footer() {
 
           {/* Column 2: Quick Links (lg:col-span-2) */}
           <div className="lg:col-span-2 space-y-5">
-            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
-              Quick Links
-            </h4>
-            <ul className="space-y-2.5">
+            <div>
+              <h4 className="font-bold text-[#0f2d62] text-[15px] tracking-[0.12em] uppercase">
+                Quick Links
+              </h4>
+              <div className="w-10 h-[3px] bg-[#ffd200] rounded-full mt-2"></div>
+            </div>
+            <ul className="space-y-3 flex flex-col">
               {[
                 { label: "Home", href: "/" },
                 { label: "Courses", href: "/#programs" },
@@ -101,7 +111,7 @@ export default function Footer() {
                 <li key={i}>
                   <Link
                     href={link.href}
-                    className="text-gray-500 hover:text-[#00AEEF] font-bold text-xs transition-colors"
+                    className="text-[#475569] hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold text-xs transition-all duration-250 ease-out"
                   >
                     {link.label}
                   </Link>
@@ -112,10 +122,13 @@ export default function Footer() {
 
           {/* Column 3: Programs (lg:col-span-3) */}
           <div className="lg:col-span-3 space-y-5">
-            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
-              Programs
-            </h4>
-            <ul className="space-y-2.5">
+            <div>
+              <h4 className="font-bold text-[#0f2d62] text-[15px] tracking-[0.12em] uppercase">
+                Programs
+              </h4>
+              <div className="w-10 h-[3px] bg-[#ffd200] rounded-full mt-2"></div>
+            </div>
+            <ul className="space-y-3 flex flex-col">
               {[
                 { label: "Class 11 Commerce", href: "/#programs" },
                 { label: "Class 12 Commerce", href: "/#programs" },
@@ -126,7 +139,7 @@ export default function Footer() {
                 <li key={i}>
                   <Link
                     href={prog.href}
-                    className="text-gray-500 hover:text-[#00AEEF] font-bold text-xs transition-colors"
+                    className="text-[#475569] hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold text-xs transition-all duration-250 ease-out"
                   >
                     {prog.label}
                   </Link>
@@ -137,10 +150,13 @@ export default function Footer() {
 
           {/* Column 4: Contact Info (lg:col-span-3) */}
           <div className="lg:col-span-3 space-y-5">
-            <h4 className="font-black text-[#1A3B70] text-sm tracking-widest uppercase">
-              Contact Us
-            </h4>
-            <ul className="space-y-3.5 text-xs text-gray-500 font-medium leading-relaxed">
+            <div>
+              <h4 className="font-bold text-[#0f2d62] text-[15px] tracking-[0.12em] uppercase">
+                Contact Us
+              </h4>
+              <div className="w-10 h-[3px] bg-[#ffd200] rounded-full mt-2"></div>
+            </div>
+            <ul className="space-y-3.5 text-xs text-[#475569] font-medium leading-relaxed">
               <li className="flex gap-2">
                 <span className="text-[#00AEEF] text-sm font-bold">📍</span>
                 <span>
@@ -151,7 +167,7 @@ export default function Footer() {
                 <span className="text-[#00AEEF] text-sm font-bold">📞</span>
                 <a
                   href="tel:8271365450"
-                  className="hover:text-[#00AEEF] font-bold transition-colors"
+                  className="hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold transition-all duration-250 ease-out"
                 >
                   +91 82713 65450
                 </a>
@@ -160,7 +176,7 @@ export default function Footer() {
                 <span className="text-[#00AEEF] text-sm font-bold">✉️</span>
                 <a
                   href="mailto:info@commercegyan.com"
-                  className="hover:text-[#00AEEF] font-bold transition-colors"
+                  className="hover:text-[#0ea5e9] hover:translate-x-1 inline-block font-bold transition-all duration-250 ease-out"
                 >
                   info@commercegyan.com
                 </a>
@@ -168,17 +184,26 @@ export default function Footer() {
             </ul>
           </div>
         </div>
+      </div>
 
-        {/* Divider and Copyright Row */}
-        <div className="border-t border-slate-100/80 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-          <p className="text-gray-400 text-xs font-semibold">
+      {/* Bottom Copyright Bar */}
+      <div 
+        className="border-t border-blue-500/10" 
+        style={{
+          background: 'rgba(255, 255, 255, 0.55)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)'
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <p className="text-[#475569] text-xs font-semibold">
             &copy; {new Date().getFullYear()} Commerce Gyan. All Rights Reserved.
           </p>
-          <div className="flex gap-4 text-gray-400 text-[11px] font-semibold">
-            <a href="#" className="hover:text-[#00AEEF] transition-colors">
+          <div className="flex gap-6 text-[#475569] text-xs font-semibold">
+            <a href="#" className="hover:text-[#0ea5e9] transition-colors">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-[#00AEEF] transition-colors">
+            <a href="#" className="hover:text-[#0ea5e9] transition-colors">
               Terms of Service
             </a>
           </div>
