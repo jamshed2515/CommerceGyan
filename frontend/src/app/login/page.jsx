@@ -139,45 +139,47 @@ export default function Login() {
         <div className="absolute bottom-1/4 right-1/4 w-52 h-52 bg-[#0ea5e9]/10 rounded-full blur-3xl animate-float-mid" />
         <div className="absolute top-12 right-12 w-28 h-28 bg-indigo-500/10 rounded-full blur-xl animate-float-fast" />
 
-        {/* Logo */}
-        <div className="relative z-10">
-          <Link href="/">
-            <div className="bg-white/95 px-5 py-2.5 rounded-2xl inline-block shadow-md hover:bg-white transition-colors duration-200">
-              <img src="/logo.png" alt="Commerce Gyan" className="h-8 w-auto object-contain" />
-            </div>
-          </Link>
-        </div>
-
-        {/* Dynamic Showcase Content */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center max-w-sm mx-auto">
-          <span className="text-xs font-black text-[#0ea5e9] tracking-widest uppercase mb-3 block">Premier Commerce Coaching</span>
-          <h1 className="text-4xl font-black leading-[1.15] tracking-tight mb-8">
-            Empowering Future <br />
-            Commerce <span className="bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8] bg-clip-text text-transparent">Leaders</span>
-          </h1>
-          
-          {/* Bullets with icons */}
-          <div className="space-y-5">
-            {[
-              { text: "98.2% Board Pass Rate", desc: "Consistently delivering top district ranks" },
-              { text: "150+ CA & Board Toppers", desc: "Alumni studying at top universities and clearing CA foundation" },
-              { text: "Expert Faculty Team", desc: "Mentored by NET qualified and post-graduate teachers" },
-              { text: "Career-Focused Learning", desc: "Conceptual clarity and personal workspace tracking" }
-            ].map((b, i) => (
-              <div key={i} className="flex gap-4 items-start group">
-                <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm group-hover:bg-[#0ea5e9]/20 transition-colors shrink-0">✨</span>
-                <div>
-                  <h4 className="font-extrabold text-white text-[15px] leading-tight">{b.text}</h4>
-                  <p className="text-blue-200/60 text-[12px] mt-0.5 font-medium">{b.desc}</p>
-                </div>
+        <div className="relative z-10 flex-1 flex flex-col justify-between max-w-sm mx-auto w-full">
+          {/* Logo container inside content column */}
+          <div className="pt-4">
+            <Link href="/">
+              <div className="bg-white/10 border border-white/10 px-5 py-3 rounded-2xl inline-block backdrop-blur-md hover:bg-white/15 transition-all duration-200">
+                <img src="/logo.png" alt="Commerce Gyan" className="h-8 w-auto object-contain invert mix-blend-screen opacity-90" />
               </div>
-            ))}
+            </Link>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="relative z-10">
-          <p className="text-blue-300/40 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
+          {/* Dynamic Showcase Content */}
+          <div className="my-auto py-10">
+            <span className="text-xs font-black text-[#0ea5e9] tracking-widest uppercase mb-3 block">Premier Commerce Coaching</span>
+            <h1 className="text-4xl font-black leading-[1.15] tracking-tight mb-8">
+              Empowering Future <br />
+              Commerce <span className="bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8] bg-clip-text text-transparent">Leaders</span>
+            </h1>
+            
+            {/* Bullets with icons */}
+            <div className="space-y-5">
+              {[
+                { text: "98.2% Board Pass Rate", desc: "Consistently delivering top district ranks" },
+                { text: "150+ CA & Board Toppers", desc: "Alumni studying at top universities and clearing CA foundation" },
+                { text: "Expert Faculty Team", desc: "Mentored by NET qualified and post-graduate teachers" },
+                { text: "Career-Focused Learning", desc: "Conceptual clarity and personal workspace tracking" }
+              ].map((b, i) => (
+                <div key={i} className="flex gap-4 items-start group">
+                  <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm group-hover:bg-[#0ea5e9]/20 transition-colors shrink-0">✨</span>
+                  <div>
+                    <h4 className="font-extrabold text-white text-[15px] leading-tight">{b.text}</h4>
+                    <p className="text-blue-200/60 text-[12px] mt-0.5 font-medium">{b.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="pb-4">
+            <p className="text-blue-300/40 text-xs font-semibold">© 2026 Commerce Gyan. All rights reserved.</p>
+          </div>
         </div>
       </div>
 

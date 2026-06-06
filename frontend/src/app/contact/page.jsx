@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Header from "../../components/Header";
 import API from "@/lib/api";
 
 const STREAMS = {
@@ -61,12 +62,15 @@ export default function Contact() {
     }
   };
 
-  const inputClass = "w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-gray-800 placeholder-slate-400 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 focus:bg-white outline-none transition-all duration-300";
-  const selectClass = "w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-gray-800 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 focus:bg-white outline-none transition-all duration-300 disabled:opacity-50 disabled:bg-slate-100";
+  const inputClass = "w-full h-[54px] px-4 rounded-xl border border-slate-200 bg-white text-sm text-gray-800 placeholder-slate-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300";
+  const selectClass = "w-full h-[54px] px-4 rounded-xl border border-slate-200 bg-white text-sm text-gray-800 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300 disabled:opacity-50 disabled:bg-slate-50";
 
   return (
-    <main className="min-h-screen bg-slate-50/30 flex flex-col font-[family-name:var(--font-mulish)] relative">
+    <main className="min-h-screen bg-slate-50/30 flex flex-col font-[family-name:var(--font-mulish)] relative pt-[75px] lg:pt-[80px]">
       
+      {/* Unified Header */}
+      <Header />
+
       {/* SUCCESS / ERROR TOAST */}
       {toast.show && (
         <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] border transition-all duration-300 ${
@@ -83,28 +87,23 @@ export default function Contact() {
         </div>
       )}
 
-      {/* Header Navigation */}
-      <nav className="w-full bg-white border-b border-slate-100 py-4 px-6 flex justify-between items-center max-w-[1400px] mx-auto z-10">
-        <Link href="/" className="inline-block">
-          <img src="/logo.png" alt="Commerce Gyan Logo" className="h-[44px] w-auto object-contain" />
-        </Link>
-        <Link href="/" className="text-[13px] font-black text-slate-500 hover:text-[#00AEEF] transition-colors flex items-center gap-2">
-          <span>←</span> Back to Home
-        </Link>
-      </nav>
-
       {/* Hero Section */}
-      <div className="bg-[#1A3B70] text-center py-20 px-6 relative overflow-hidden select-none">
+      <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 text-center py-20 px-6 relative overflow-hidden select-none">
         {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#00AEEF] rounded-full blur-[90px] opacity-20 translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#FFCC00] rounded-full blur-[90px] opacity-10 -translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00AEEF]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3"></div>
         
-        <h1 className="text-4xl md:text-5xl font-black text-white mb-4 relative z-10 tracking-tight leading-none">
-          Let&apos;s Start Your Academic Journey
-        </h1>
-        <p className="text-blue-100/90 text-sm md:text-base max-w-2xl mx-auto font-bold relative z-10 leading-relaxed">
-          We&apos;re here to help with admissions, batch queries, courses, and personalized career guidance.
-        </p>
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <span className="bg-white/10 text-[#38bdf8] text-[10px] font-black px-4 py-1.5 rounded-full tracking-widest uppercase mb-4 inline-block backdrop-blur-md border border-white/5">
+            Get In Touch
+          </span>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight leading-tight">
+            Let's Start Your <span className="bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8] bg-clip-text text-transparent">Academic Journey</span>
+          </h1>
+          <p className="text-blue-100/70 text-sm md:text-base max-w-xl mx-auto font-medium leading-relaxed">
+            Have questions about admissions, course curricula, or batches? Our expert academic counseling team is ready to guide you.
+          </p>
+        </div>
       </div>
 
       {/* Main Container */}
@@ -124,25 +123,42 @@ export default function Contact() {
             <div className="grid sm:grid-cols-2 gap-4">
               {[
                 { 
-                  icon: "📍", 
+                  icon: (
+                    <svg className="w-5 h-5 text-[#00AEEF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                  ), 
                   title: "Visit Us", 
                   desc: "Behind Rajasthani Dharamshala, Katrasgarh, Dhanbad, Jharkhand", 
                   link: "https://maps.google.com/?q=Commerce+Gyan+Katrasgarh" 
                 },
                 { 
-                  icon: "📞", 
+                  icon: (
+                    <svg className="w-5 h-5 text-[#00AEEF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                    </svg>
+                  ), 
                   title: "Call Us", 
                   desc: "+91 82713 65450", 
                   link: "tel:8271365450" 
                 },
                 { 
-                  icon: "✉️", 
+                  icon: (
+                    <svg className="w-5 h-5 text-[#00AEEF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                  ), 
                   title: "Email Us", 
                   desc: "info@commercegyan.com", 
                   link: "mailto:info@commercegyan.com" 
                 },
                 { 
-                  icon: "💬", 
+                  icon: (
+                    <svg className="w-5 h-5 text-[#00AEEF]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 11.908.01c3.152.001 6.117 1.23 8.351 3.463a11.756 11.756 0 013.48 8.368c-.004 6.548-5.342 11.887-11.853 11.887a11.815 11.815 0 01-5.686-1.448L0 24zm6.305-1.654a9.882 9.882 0 004.93 1.303h.005c5.507 0 9.99-4.478 9.99-9.985 0-2.667-1.04-5.176-2.93-7.065A9.925 9.925 0 0012.012 2c-5.506 0-9.989 4.478-9.989 9.984a9.96 9.96 0 001.37 5.054L2 22l5.077-1.332zm11.168-7.29c-.3-.15-1.774-.877-2.046-.977-.272-.1-.47-.15-.668-.15-.198-.3-.767-.976-.94-1.175-.173-.2-.347-.225-.647-.075-.3.15-1.266.467-2.41 1.485-.89.795-1.492 1.779-1.666 2.079-.173.3-.018.462.13.61.135.134.3.349.45.524.15.175.2.299.3.5.1.2.05.374-.025.524-.075.15-.668 1.61-1.11 2.685-.246.596-.495.516-.678.507-.173-.008-.37-.01-.57-.01-.197 0-.518.074-.789.373-.272.3-1.04 1.022-1.04 2.492 0 1.47 1.07 2.89 1.22 3.09.15.2 2.102 3.21 5.093 4.5 1.185.51 1.938.697 2.486.772.71.099 1.36.05 1.875-.025.572-.085 1.774-.724 2.022-1.42.247-.699.247-1.296.173-1.42-.074-.124-.272-.2-.572-.35z"/>
+                    </svg>
+                  ), 
                   title: "WhatsApp Chat", 
                   desc: "+91 82713 65450", 
                   link: "https://wa.me/918271365450" 
@@ -156,7 +172,7 @@ export default function Contact() {
                   className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_4px_15px_rgba(15,23,42,0.02)] hover:shadow-[0_12px_25px_rgba(15,23,42,0.06)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
                 >
                   <div>
-                    <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-lg shadow-sm mb-4 shrink-0">
+                    <div className="w-10 h-10 bg-[#E6F4FE] rounded-xl flex items-center justify-center shadow-sm mb-4 shrink-0">
                       {card.icon}
                     </div>
                     <h3 className="font-extrabold text-[#1A3B70] text-[15px]">{card.title}</h3>
@@ -172,7 +188,7 @@ export default function Contact() {
               <div className="flex flex-wrap gap-3">
                 <a 
                   href="tel:8271365450" 
-                  className="flex-1 bg-[#1A3B70] text-white font-black text-center py-3 px-4 rounded-xl text-xs hover:bg-[#122A50] hover:-translate-y-0.5 active:translate-y-0 shadow-sm transition-all duration-200"
+                  className="flex-1 h-[54px] bg-[#1A3B70] text-white font-black text-center rounded-xl text-xs hover:bg-[#122A50] hover:-translate-y-0.5 active:translate-y-0 shadow-sm transition-all duration-205 flex items-center justify-center gap-2"
                 >
                   📞 Call Now
                 </a>
@@ -180,7 +196,7 @@ export default function Contact() {
                   href="https://wa.me/918271365450" 
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 bg-[#25D366] text-white font-black text-center py-3 px-4 rounded-xl text-xs hover:bg-[#20ba59] hover:-translate-y-0.5 active:translate-y-0 shadow-sm transition-all duration-200"
+                  className="flex-1 h-[54px] bg-[#25D366] text-white font-black text-center rounded-xl text-xs hover:bg-[#20ba59] hover:-translate-y-0.5 active:translate-y-0 shadow-sm transition-all duration-205 flex items-center justify-center gap-2"
                 >
                   💬 WhatsApp
                 </a>
@@ -188,7 +204,7 @@ export default function Contact() {
                   href="https://maps.google.com/?q=Commerce+Gyan+Katrasgarh" 
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 bg-[#FFCC00] text-[#1A3B70] font-black text-center py-3 px-4 rounded-xl text-xs hover:bg-[#ffd633] hover:-translate-y-0.5 active:translate-y-0 shadow-sm transition-all duration-200"
+                  className="flex-1 h-[54px] bg-[#FFCC00] text-[#1A3B70] font-black text-center rounded-xl text-xs hover:bg-[#ffd633] hover:-translate-y-0.5 active:translate-y-0 shadow-sm transition-all duration-205 flex items-center justify-center gap-2"
                 >
                   🗺️ Get Directions
                 </a>
@@ -350,14 +366,14 @@ export default function Contact() {
                     placeholder="Enter any additional queries about batches or study materials" 
                     value={form.message}
                     onChange={e => setForm({ ...form, message: e.target.value })}
-                    className="w-full min-h-[100px] px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-gray-800 placeholder-slate-400 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 focus:bg-white outline-none transition-all duration-300 resize-none"
+                    className="w-full min-h-[120px] px-4 py-3.5 rounded-xl border border-slate-200 bg-white text-sm text-gray-800 placeholder-slate-300 focus:border-[#0ea5e9] focus:ring-4 focus:ring-[#0ea5e9]/12 outline-none transition-all duration-300 resize-none"
                   ></textarea>
                 </div>
 
                 <button 
                   type="submit"
                   disabled={loading}
-                  className="w-full md:w-auto h-12 px-10 bg-[#00AEEF] hover:bg-[#009CD6] text-white font-black rounded-xl shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer mt-4"
+                  className="w-full h-[54px] bg-[#00AEEF] hover:bg-[#009CD6] text-white font-black rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer mt-4"
                 >
                   {loading ? (
                     <>
@@ -370,24 +386,65 @@ export default function Contact() {
                 </button>
               </form>
             </div>
-
-            {/* Embedded Google Map Section */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_12px_45px_rgba(15,23,42,0.03)] p-6 overflow-hidden h-[340px] relative">
-              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.0463283907765!2d86.27649537604555!3d23.816960886131495!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39f4236a28cc1a21%3A0xe54d924dc528c11e!2sCommerce%20Gyan!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
-                width="100%" 
-                height="100%" 
-                style={{ border: 0, borderRadius: "1.25rem" }} 
-                allowFullScreen="" 
-                loading="lazy" 
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Commerce Gyan Map Location"
-              ></iframe>
-            </div>
           </div>
 
         </div>
       </div>
+
+      {/* Visit Our Campus Section */}
+      <section className="bg-white border-t border-slate-100 py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-12 gap-10 items-center">
+            {/* Address & Details (Col: 4) */}
+            <div className="lg:col-span-4 space-y-6">
+              <div>
+                <span className="text-xs font-black text-[#00AEEF] tracking-widest uppercase block mb-2">Location</span>
+                <h2 className="text-3xl font-black text-[#1A3B70] tracking-tight">Visit Our Campus</h2>
+                <p className="text-slate-500 text-sm font-semibold mt-2 leading-relaxed">
+                  Walk in to our main center in Katrasgarh for admissions, counseling sessions, and student queries.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                <h3 className="font-extrabold text-slate-800 text-[15px] mb-3">Campus Address</h3>
+                <p className="text-slate-600 text-[14px] font-bold leading-relaxed whitespace-pre-line">
+                  Commerce Gyan
+                  Behind Rajasthani Dharamshala,
+                  Katrasgarh, Dhanbad,
+                  Jharkhand – 828113
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <a 
+                  href="https://maps.google.com/?q=Commerce+Gyan+Katrasgarh"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full inline-flex h-12 bg-[#00AEEF] hover:bg-[#009CD6] text-white font-black rounded-xl text-xs items-center justify-center gap-2 shadow-sm hover:shadow transition-all duration-200"
+                >
+                  🗺️ Open in Google Maps
+                </a>
+              </div>
+            </div>
+
+            {/* Map Frame (Col: 8) */}
+            <div className="lg:col-span-8">
+              <div className="bg-slate-50 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(15,23,42,0.03)] p-4 overflow-hidden h-[400px] w-full relative">
+                <iframe 
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.0463283907765!2d86.27649537604555!3d23.816960886131495!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39f4236a28cc1a21%3A0xe54d924dc528c11e!2sCommerce%20Gyan!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
+                  width="100%" 
+                  height="100%" 
+                  style={{ border: 0, borderRadius: "1.25rem" }} 
+                  allowFullScreen="" 
+                  loading="lazy" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Commerce Gyan Map Location"
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
     </main>
   );
