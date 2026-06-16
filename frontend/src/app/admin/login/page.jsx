@@ -1,13 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import API from "@/lib/api";
+import API from "@/config/api";
+import { setSession } from "@/lib/auth";
 
 export default function AdminLogin() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPw, setShowPw] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
@@ -17,21 +19,6 @@ export default function AdminLogin() {
     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
   };
 
-  // Redirect check on mount for already logged-in admin users
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        if (user.role === "admin") {
-          router.push("/admin");
-        }
-      } catch {
-        localStorage.clear();
-      }
-    }
-  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,8 +39,8 @@ export default function AdminLogin() {
       }
 
       showToast("Access granted! Redirecting...", "success");
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // sessionStorage by default (clears on browser close); localStorage only if Remember Me
+      setSession(data.token, data.user, rememberMe);
       
       setTimeout(() => {
         router.push("/admin");
@@ -149,6 +136,29 @@ export default function AdminLogin() {
                 {showPw ? "Hide" : "Show"}
               </button>
             </div>
+          </div>
+
+          {/* Remember Me */}
+          <div className="flex items-center gap-2.5 mt-1">
+            <button
+              type="button"
+              onClick={() => setRememberMe(!rememberMe)}
+              className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer ${
+                rememberMe ? "bg-slate-900 border-slate-900" : "border-slate-300 bg-white"
+              }`}
+            >
+              {rememberMe && (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3.5" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+            <span
+              onClick={() => setRememberMe(!rememberMe)}
+              className="text-[12px] font-semibold text-slate-500 cursor-pointer select-none"
+            >
+              Remember me on this device
+            </span>
           </div>
 
           <button 

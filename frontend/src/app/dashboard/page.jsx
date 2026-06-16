@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import API from "@/lib/api";
+import API from "@/config/api";
+import { validateSession, clearSession } from "@/lib/auth";
 const NAV = [
   { id: "overview", icon: "🏠", label: "Dashboard" },
   { id: "courses", icon: "📚", label: "My Courses" },
@@ -34,28 +35,36 @@ export default function StudentDashboard() {
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3000); };
 
   useEffect(() => {
-    if (!token) { router.push("/login"); return; }
-    Promise.all([
-      fetch(`${API}/api/auth/me`, { headers: H }).then(r => r.json()),
-      fetch(`${API}/api/announcements`).then(r => r.json()),
-      fetch(`${API}/api/fees/my`, { headers: H }).then(r => r.json()),
-      fetch(`${API}/api/notes`, { headers: H }).then(r => r.json()),
-    ]).then(([u, a, f, n]) => {
-      if (u.message === "Invalid or expired token") { router.push("/login"); return; }
-      setUser(u);
-      setProfileForm({ name: u.name || "", phone: u.phone || "", address: u.address || "" });
-      setAnnouncements(Array.isArray(a) ? a : []);
-      setFees(Array.isArray(f) ? f : []);
-      setNotes(Array.isArray(n) ? n : []);
-      if (u.batch?._id || u.batch) {
-        const bId = u.batch?._id || u.batch;
-        fetch(`${API}/api/schedules?batch=${bId}`, { headers: H }).then(r => r.json()).then(s => {
-          setSchedules(Array.isArray(s) ? s : []);
-        });
-        fetch(`${API}/api/batches/${bId}`, { headers: H }).then(r => r.json()).then(b => setBatch(b));
+    // Server-side token validation — catches expired/invalid JWTs
+    validateSession("student").then(({ valid, user: freshUser }) => {
+      if (!valid) {
+        clearSession();
+        router.push("/login");
+        return;
       }
-      setLoading(false);
-    }).catch(() => router.push("/login"));
+      const token = localStorage.getItem("token");
+      const H = { Authorization: `Bearer ${token}` };
+      Promise.all([
+        Promise.resolve(freshUser), // already validated above
+        fetch(`${API}/api/announcements`).then(r => r.json()),
+        fetch(`${API}/api/fees/my`, { headers: H }).then(r => r.json()),
+        fetch(`${API}/api/notes`, { headers: H }).then(r => r.json()),
+      ]).then(([u, a, f, n]) => {
+        setUser(u);
+        setProfileForm({ name: u.name || "", phone: u.phone || "", address: u.address || "" });
+        setAnnouncements(Array.isArray(a) ? a : []);
+        setFees(Array.isArray(f) ? f : []);
+        setNotes(Array.isArray(n) ? n : []);
+        if (u.batch?._id || u.batch) {
+          const bId = u.batch?._id || u.batch;
+          fetch(`${API}/api/schedules?batch=${bId}`, { headers: H }).then(r => r.json()).then(s => {
+            setSchedules(Array.isArray(s) ? s : []);
+          });
+          fetch(`${API}/api/batches/${bId}`, { headers: H }).then(r => r.json()).then(b => setBatch(b));
+        }
+        setLoading(false);
+      }).catch(() => { clearSession(); router.push("/login"); });
+    });
   }, []);
 
   const handleLogout = () => { localStorage.clear(); router.push("/login"); };

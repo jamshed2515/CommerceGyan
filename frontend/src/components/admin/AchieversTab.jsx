@@ -14,7 +14,7 @@ import {
   Dropdown,
   DropdownItem,
 } from "./AdminUI";
-import API from "@/lib/api";
+import API from "@/config/api";
 const BLANK = { name: "", score: "", course: "Commerce", year: new Date().getFullYear().toString(), imageUrl: "", rank: 0, isActive: true };
 
 export default function AchieversTab({ achievers, token, onRefresh, flash }) {

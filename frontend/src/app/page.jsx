@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import WhatsAppButton from "../components/WhatsAppButton";
 import Header from "../components/Header";
-import API from "@/lib/api";
+import API from "@/config/api";
 
 export default function Home() {
   const [activeCourseTab, setActiveCourseTab] = useState("School");

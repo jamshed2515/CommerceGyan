@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
     batch: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null },
     profilePhoto: { type: String, default: "" },
     subject: { type: String, default: "" }, // for teachers: their teaching subject
+    isFirstLogin: { type: Boolean, default: false }, // true = must set password before dashboard access
   },
   { timestamps: true }
 );

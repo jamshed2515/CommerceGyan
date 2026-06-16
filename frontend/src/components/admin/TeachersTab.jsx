@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { Search, Mail, Phone, BookOpen, Calendar, Edit2, Trash2, MoreVertical, Plus, User } from "lucide-react";
+import { Search, Mail, Phone, BookOpen, Calendar, Edit2, Trash2, MoreVertical, Plus, User, KeyRound, ShieldAlert } from "lucide-react";
 import {
   inp,
   btnPrimary,
@@ -15,7 +15,7 @@ import {
   Dropdown,
   DropdownItem,
 } from "./AdminUI";
-import API from "@/lib/api";
+import API from "@/config/api";
 const BLANK = { name: "", email: "", password: "", phone: "", subject: "" };
 
 export default function TeachersTab({ teachers, batches = [], schedules = [], token, onRefresh, flash }) {
@@ -26,6 +26,9 @@ export default function TeachersTab({ teachers, batches = [], schedules = [], to
   const [confirm, setConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [resetPw, setResetPw] = useState(null); // { teacher } or null
+  const [tempPw, setTempPw] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   const teacherStats = useMemo(() => {
     const map = {};
@@ -90,6 +93,29 @@ export default function TeachersTab({ teachers, batches = [], schedules = [], to
   };
 
   const valid = form.name?.trim() && (editing || form.email?.trim());
+
+  const handleResetPassword = async () => {
+    if (!tempPw.trim() || tempPw.trim().length < 6) {
+      flash("❌ Temporary password must be at least 6 characters");
+      return;
+    }
+    setResetLoading(true);
+    const res = await fetch(`${API}/api/admin/teachers/${resetPw.teacher._id}/reset-password`, {
+      method: "PUT",
+      headers: H,
+      body: JSON.stringify({ tempPassword: tempPw.trim() }),
+    });
+    setResetLoading(false);
+    if (res.ok) {
+      flash(`✅ Password reset for ${resetPw.teacher.name}. They must set a new password on next login.`);
+      setResetPw(null);
+      setTempPw("");
+      onRefresh();
+    } else {
+      const d = await res.json();
+      flash("❌ " + (d.message || "Reset failed"));
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -172,6 +198,11 @@ export default function TeachersTab({ teachers, batches = [], schedules = [], to
                       <Edit2 className="w-3.5 h-3.5" /> Edit details
                     </DropdownItem>
                     <DropdownItem
+                      onClick={() => { setResetPw({ teacher: t }); setTempPw(""); }}
+                    >
+                      <KeyRound className="w-3.5 h-3.5" /> Reset password
+                    </DropdownItem>
+                    <DropdownItem
                       onClick={() =>
                         setConfirm({
                           msg: `Are you sure you want to delete ${t.name}?`,
@@ -190,8 +221,15 @@ export default function TeachersTab({ teachers, batches = [], schedules = [], to
                     </DropdownItem>
                   </Dropdown>
                 </div>
+                {/* isFirstLogin badge */}
+                {t.isFirstLogin && (
+                  <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg px-2.5 py-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wide">Password Setup Pending</span>
+                  </div>
+                )}
 
-                {/* Subject Badge — below name, integrated */}
+                {/* Subject Badge */}
                 {t.subject && (
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-3 h-3 text-slate-350 dark:text-slate-500 shrink-0" />
@@ -262,8 +300,8 @@ export default function TeachersTab({ teachers, batches = [], schedules = [], to
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inp} placeholder="faculty@commercegyan.com" disabled={!!editing} />
             </Field>
             {!editing && (
-              <Field label="Security Password">
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inp} placeholder="Default: Teacher@123" />
+              <Field label="Temporary Password" required>
+                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inp} placeholder="Min. 6 chars — teacher will change this" />
               </Field>
             )}
             <Field label="Phone Contact">
@@ -271,6 +309,44 @@ export default function TeachersTab({ teachers, batches = [], schedules = [], to
             </Field>
             <Field label="Department Subject">
               <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className={inp} placeholder="e.g. Commerce, Accounts, Economics" />
+            </Field>
+          </div>
+          {!editing && (
+            <p className="text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-1 flex items-start gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              Teacher will be required to set their own password on first login.
+            </p>
+          )}
+        </FormModal>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetPw && (
+        <FormModal
+          title="Reset Teacher Password"
+          onClose={() => { setResetPw(null); setTempPw(""); }}
+          onSubmit={handleResetPassword}
+          submitLabel="Reset Password"
+          loading={resetLoading}
+          disabled={!tempPw.trim() || tempPw.trim().length < 6}
+        >
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[12px] font-black text-amber-700">Reset password for {resetPw.teacher.name}</p>
+                <p className="text-[11px] font-semibold text-amber-600 mt-0.5">The teacher will be required to set a new personal password on their next login.</p>
+              </div>
+            </div>
+            <Field label="New Temporary Password" required>
+              <input
+                type="text"
+                value={tempPw}
+                onChange={(e) => setTempPw(e.target.value)}
+                className={inp}
+                placeholder="Min. 6 characters — share with teacher"
+                autoFocus
+              />
             </Field>
           </div>
         </FormModal>

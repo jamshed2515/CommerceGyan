@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Header from "../../components/Header";
-import API from "@/lib/api";
+import API from "@/config/api";
 
 const STREAMS = {
   "School": ["Class 7", "Class 8", "Class 9", "Class 10"],

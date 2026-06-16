@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import API from "@/lib/api";
+import API from "@/config/api";
 
 const STREAMS = {
   "School": ["Class 7", "Class 8", "Class 9", "Class 10"],
@@ -25,25 +25,6 @@ export default function Signup() {
     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
   };
 
-  // Redirect check on mount for already logged-in users
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        if (user.role === "admin") {
-          router.push("/admin");
-        } else if (user.role === "teacher") {
-          router.push("/teacher");
-        } else if (user.role === "student") {
-          router.push("/dashboard");
-        }
-      } catch {
-        localStorage.clear();
-      }
-    }
-  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

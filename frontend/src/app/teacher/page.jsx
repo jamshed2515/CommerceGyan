@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import API from "@/lib/api";
+import API from "@/config/api";
+import { validateSession, clearSession, getStoredToken, getStoredUser } from "@/lib/auth";
 const inp = "w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-[#1A3B70] outline-none text-sm bg-gray-50";
 const NAV = [
   { id: "overview", icon: "🏠", label: "Dashboard" },
@@ -30,17 +31,32 @@ export default function TeacherDashboard() {
   const [editSch, setEditSch] = useState(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
+  const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState("");
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token = getStoredToken();
   const H = { Authorization: `Bearer ${token}` };
   const JH = { ...H, "Content-Type": "application/json" };
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3000); };
 
   useEffect(() => {
-    if (!token) { router.push("/login"); return; }
-    const stored = JSON.parse(localStorage.getItem("user") || "{}");
-    if (stored.role !== "teacher") { router.push("/login"); return; }
-    loadData();
+    // Server-side token validation — catches expired/invalid JWTs
+    validateSession("teacher").then(({ valid }) => {
+      if (!valid) {
+        clearSession();
+        router.push("/login");
+        return;
+      }
+      // Check isFirstLogin — redirect to mandatory setup if not done yet
+      const storedUser = getStoredUser();
+      if (storedUser?.isFirstLogin) {
+        router.push("/teacher/setup-password");
+        return;
+      }
+      loadData();
+    });
   }, []);
 
   const loadData = async () => {
@@ -60,7 +76,33 @@ export default function TeacherDashboard() {
     setLoading(false);
   };
 
-  const handleLogout = () => { localStorage.clear(); router.push("/login"); };
+  const handleLogout = () => { clearSession(); router.push("/login"); };
+
+  // ── Change Password (from profile tab) ──
+  const PW_RULES = [
+    { re: /.{8,}/, label: "8+ characters" },
+    { re: /[A-Z]/, label: "Uppercase" },
+    { re: /[a-z]/, label: "Lowercase" },
+    { re: /\d/, label: "Number" },
+    { re: /[^A-Za-z\d]/, label: "Special char" },
+  ];
+  const handleChangePassword = async () => {
+    setPwError(""); setPwSuccess("");
+    const allOk = PW_RULES.every((r) => r.re.test(pwForm.newPassword));
+    if (!allOk) { setPwError("Password must be 8+ chars with upper, lower, number & special character."); return; }
+    if (pwForm.newPassword !== pwForm.confirmPassword) { setPwError("Passwords do not match."); return; }
+    setPwLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/change-password`, {
+        method: "PUT", headers: JH,
+        body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwError(data.message || "Failed"); }
+      else { setPwSuccess("✅ Password changed successfully!"); setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" }); }
+    } catch { setPwError("Server error. Try again."); }
+    finally { setPwLoading(false); }
+  };
 
   const saveAnn = async () => {
     if (!annForm.title || !annForm.body) return flash("❌ Title and body required");
@@ -368,8 +410,10 @@ export default function TeacherDashboard() {
 
           {/* PROFILE */}
           {tab === "profile" && (
-            <div className="max-w-md space-y-4">
+            <div className="max-w-lg space-y-6">
               <h2 className="text-xl font-black text-[#1A3B70]">My Profile</h2>
+
+              {/* Profile Details */}
               <div className={card}>
                 <div className="space-y-3">
                   {[["Name", "name", "text"], ["Phone", "phone", "text"], ["Subject", "subject", "text"]].map(([l, k, t]) => (
@@ -383,6 +427,56 @@ export default function TeacherDashboard() {
                     <p className="font-bold text-[#1A3B70]">{user?.email}</p>
                   </div>
                   <button onClick={saveProfile} className="bg-[#1A3B70] text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-[#122A50]">Save Profile</button>
+                </div>
+              </div>
+
+              {/* Security Settings — Change Password */}
+              <div className={card}>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xl">🔐</span>
+                  <div>
+                    <h3 className="font-black text-[#1A3B70]">Security Settings</h3>
+                    <p className="text-xs text-gray-400 font-semibold mt-0.5">Keep your account secure by updating your password regularly.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {pwError && (
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-3 py-2.5 text-[12px] font-bold">{pwError}</div>
+                  )}
+                  {pwSuccess && (
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-3 py-2.5 text-[12px] font-bold">{pwSuccess}</div>
+                  )}
+                  {[["Current Password", "currentPassword"], ["New Password", "newPassword"], ["Confirm New Password", "confirmPassword"]].map(([label, key]) => (
+                    <div key={key}>
+                      <label className="text-xs font-bold text-gray-400 uppercase block mb-1">{label}</label>
+                      <input
+                        type="password"
+                        value={pwForm[key]}
+                        onChange={(e) => setPwForm({ ...pwForm, [key]: e.target.value })}
+                        className={inp}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  ))}
+                  {/* Strength mini-indicators */}
+                  {pwForm.newPassword.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {PW_RULES.map((r) => (
+                        <span key={r.label} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
+                          r.re.test(pwForm.newPassword)
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                            : "bg-slate-50 text-slate-400 border-slate-200"
+                        }`}>{r.re.test(pwForm.newPassword) ? "✓" : "○"} {r.label}</span>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={pwLoading || !pwForm.currentPassword || !pwForm.newPassword || !pwForm.confirmPassword}
+                    className="bg-[#1A3B70] text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-[#122A50] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {pwLoading ? "Updating..." : "Change Password"}
+                  </button>
                 </div>
               </div>
             </div>

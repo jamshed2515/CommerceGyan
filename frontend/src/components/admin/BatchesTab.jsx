@@ -14,7 +14,7 @@ import {
   Dropdown,
   DropdownItem,
 } from "./AdminUI";
-import API from "@/lib/api";
+import API from "@/config/api";
 const BLANK = { batchName: "", course: "", teacher: "", timing: "", description: "" };
 
 export default function BatchesTab({ batches, teachers, courses, students, token, onRefresh, flash }) {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Search, DollarSign, Calendar, RefreshCw, CreditCard } from "lucide-react";
 import {
   inp,
@@ -7,35 +7,10 @@ import {
   PageHeader,
   card,
 } from "./AdminUI";
-import API from "@/lib/api";
 
-export default function PaymentsTab({ token, flash }) {
-  const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function PaymentsTab({ token, payments = [], loading = false, onRefresh, flash }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-
-  const H = { Authorization: `Bearer ${token}` };
-
-  const fetchPayments = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/api/payments/all`, { headers: H });
-      if (res.ok) {
-        const data = await res.json();
-        setPayments(Array.isArray(data) ? data : []);
-      } else {
-        flash("❌ Failed to load payment history");
-      }
-    } catch {
-      flash("❌ Error fetching payments");
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchPayments();
-  }, []);
 
   const stats = useMemo(() => {
     let paidCount = 0;
@@ -79,7 +54,7 @@ export default function PaymentsTab({ token, flash }) {
         title="Razorpay Receipts Log"
         subtitle="View and verify instant online fee payments routed through Razorpay checkout"
         action={
-          <button onClick={fetchPayments} className="bg-slate-50 text-slate-600 hover:bg-slate-100 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/20 active:scale-98">
+          <button onClick={() => onRefresh && onRefresh()} className="bg-slate-50 text-slate-600 hover:bg-slate-100 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/20 active:scale-98">
             <RefreshCw className="w-3.5 h-3.5" /> Reload logs
           </button>
         }

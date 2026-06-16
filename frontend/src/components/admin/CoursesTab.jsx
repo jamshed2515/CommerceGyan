@@ -12,7 +12,7 @@ import {
   Dropdown,
   DropdownItem,
 } from "./AdminUI";
-import API from "@/lib/api";
+import API from "@/config/api";
 
 const CATEGORIES = ["School", "Commerce", "Professional", "Language", "Competitive"];
 

@@ -62,8 +62,47 @@ router.post("/login", async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isFirstLogin: user.isFirstLogin || false,
+      },
     });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ─── First-Time Password Setup ─────────────────────────────────────────────
+// POST /api/auth/setup-password
+// Called on first teacher login. Validates current (temp) password,
+// sets new password, and clears isFirstLogin flag.
+router.post("/setup-password", authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Both current and new password are required" });
+    }
+    // Password strength validation
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!strong.test(newPassword)) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters with uppercase, lowercase, number, and special character",
+      });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Current (temporary) password is incorrect" });
+    // Prevent reuse of same password
+    const isSame = await bcrypt.compare(newPassword, user.password);
+    if (isSame) return res.status(400).json({ message: "New password must be different from the current password" });
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.isFirstLogin = false;
+    await user.save();
+    res.json({ message: "Password set successfully. Welcome to Commerce Gyan!" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
@@ -77,7 +116,7 @@ router.get("/me", authMiddleware, async (req, res) => {
     }
     const user = await User.findById(req.user.id)
       .select("-password")
-      .populate("batch", "batchName timing teacher")
+      .populate("batch", "batchName timing teacher");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (err) {
@@ -102,17 +141,26 @@ router.put("/profile", authMiddleware, async (req, res) => {
   }
 });
 
-// Change password
+// Change password (self-service from profile — works for all roles after first login)
 router.put("/change-password", authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: "Both current and new password are required" });
     }
+    // Password strength
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!strong.test(newPassword)) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters with uppercase, lowercase, number, and special character",
+      });
+    }
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+    const isSame = await bcrypt.compare(newPassword, user.password);
+    if (isSame) return res.status(400).json({ message: "New password must be different from the current password" });
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
     res.json({ message: "Password changed successfully" });

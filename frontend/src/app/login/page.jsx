@@ -1,14 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import API from "@/lib/api";
+import API from "@/config/api";
+import { setSession } from "@/lib/auth";
 
 export default function Login() {
   const router = useRouter();
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPw, setShowPw] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
@@ -18,25 +20,7 @@ export default function Login() {
     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
   };
 
-  // Redirect check on mount for already logged-in users
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        if (user.role === "admin") {
-          router.push("/admin");
-        } else if (user.role === "teacher") {
-          router.push("/teacher");
-        } else if (user.role === "student") {
-          router.push("/dashboard");
-        }
-      } catch {
-        localStorage.clear();
-      }
-    }
-  }, [router]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,11 +59,15 @@ export default function Login() {
       }
 
       showToast("Login successful! Redirecting...", "success");
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // Store in sessionStorage by default; localStorage only if "Remember Me" is checked
+      setSession(data.token, data.user, rememberMe);
       
       setTimeout(() => {
-        router.push(data.user.role === "teacher" ? "/teacher" : "/dashboard");
+        if (data.user.role === "teacher") {
+          router.push(data.user.isFirstLogin ? "/teacher/setup-password" : "/teacher");
+        } else {
+          router.push("/dashboard");
+        }
       }, 800);
     } catch { 
       showToast("Server error. Please try again.", "error");

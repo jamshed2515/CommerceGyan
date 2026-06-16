@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { validateSession, clearSession } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
@@ -42,6 +43,7 @@ import FeeTab from "@/components/admin/FeeTab";
 import CoursesTab from "@/components/admin/CoursesTab";
 import AchieversTab from "@/components/admin/AchieversTab";
 import PaymentsTab from "@/components/admin/PaymentsTab";
+import GlobalSearch from "@/components/admin/GlobalSearch";
 import {
   Toast,
   ConfirmModal,
@@ -58,7 +60,7 @@ import {
   FormModal,
   PageHeader,
 } from "@/components/admin/AdminUI";
-import API from "@/lib/api";
+import API from "@/config/api";
 
 const SECTIONS = [
   {
@@ -107,9 +109,24 @@ const SECTIONS = [
   }
 ];
 
-export default function AdminDashboard() {
+// Module-level session cache (cleared on full page unload)
+let _dashboardCache = null;
+
+// Inner component that uses useSearchParams (must be wrapped in Suspense)
+function AdminDashboardInner() {
   const router = useRouter();
-  const [tab, setTab] = useState("overview");
+  const searchParams = useSearchParams();
+
+  // Read tab from URL query param, default to "overview"
+  const tab = searchParams.get("tab") || "overview";
+
+  // Helper to change tabs — updates the URL instead of React state
+  const setTab = (newTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", newTab);
+    router.push(`/admin?${params.toString()}`, { scroll: false });
+  };
+
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -120,11 +137,15 @@ export default function AdminDashboard() {
   const [achievers, setAchievers] = useState([]);
   const [notes, setNotes] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [stats, setStats] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarHovered, setSidebarHovered] = useState(false);
+  const [loading, setLoading] = useState(!_dashboardCache);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
+  // ── Sidebar collapse: single source of truth, persisted in localStorage ──
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("adminSidebarCollapsed") === "true";
+  });
   const [darkMode, setDarkMode] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [msg, setMsg] = useState("");
@@ -151,42 +172,56 @@ export default function AdminDashboard() {
   const JH = { ...H, "Content-Type": "application/json" };
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!token || user.role !== "admin") { router.push("/admin/login"); return; }
-    fetchAll();
-  }, []);
+  // Hydrate all states from a dashboard data object
+  const hydrateStates = (d) => {
+    setStudents(Array.isArray(d.students) ? d.students : []);
+    setTeachers(Array.isArray(d.teachers) ? d.teachers : []);
+    setBatches(Array.isArray(d.batches) ? d.batches : []);
+    setSchedules(Array.isArray(d.schedules) ? d.schedules : []);
+    setFees(Array.isArray(d.fees) ? d.fees : []);
+    setCourses(Array.isArray(d.courses) ? d.courses : []);
+    setAnnouncements(Array.isArray(d.announcements) ? d.announcements : []);
+    setNotes(Array.isArray(d.notes) ? d.notes : []);
+    setEnquiries(Array.isArray(d.enquiries) ? d.enquiries : []);
+    setAchievers(Array.isArray(d.achievers) ? d.achievers : []);
+    setPayments(Array.isArray(d.payments) ? d.payments : []);
+    setStats(d.stats && typeof d.stats === 'object' ? d.stats : {});
+  };
 
-  const fetchAll = async () => {
+  // Consolidated single-request fetch with Stale-While-Revalidate session cache
+  const fetchAll = async (force = false) => {
+    if (!force && _dashboardCache) {
+      // Instant hydration from cache — no loading flash
+      hydrateStates(_dashboardCache);
+      // Background revalidation (silent, no loading spinner)
+      fetch(`${API}/api/admin/dashboard`, { headers: H })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d && !d.message) { _dashboardCache = d; hydrateStates(d); } })
+        .catch(() => {});
+      return;
+    }
     setLoading(true);
     try {
-      const [st, tc, bt, sc, fe, co, an, no, en, statsData, ac] = await Promise.all([
-        fetch(`${API}/api/admin/students`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/admin/teachers`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/batches`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/schedules`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/fees`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/courses`).then(r => r.json()),
-        fetch(`${API}/api/announcements`).then(r => r.json()),
-        fetch(`${API}/api/notes`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/enquiry`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/admin/stats`, { headers: H }).then(r => r.json()),
-        fetch(`${API}/api/achievers/all`, { headers: H }).then(r => r.json()),
-      ]);
-      setStudents(Array.isArray(st) ? st : []);
-      setTeachers(Array.isArray(tc) ? tc : []);
-      setBatches(Array.isArray(bt) ? bt : []);
-      setSchedules(Array.isArray(sc) ? sc : []);
-      setFees(Array.isArray(fe) ? fe : []);
-      setCourses(Array.isArray(co) ? co : []);
-      setAnnouncements(Array.isArray(an) ? an : []);
-      setNotes(Array.isArray(no) ? no : []);
-      setEnquiries(Array.isArray(en) ? en : []);
-      setStats(statsData && !statsData.message ? statsData : {});
-      setAchievers(Array.isArray(ac) ? ac : []);
+      const res = await fetch(`${API}/api/admin/dashboard`, { headers: H });
+      if (!res.ok) throw new Error("Dashboard fetch failed");
+      const d = await res.json();
+      _dashboardCache = d;
+      hydrateStates(d);
     } catch (e) { flash("❌ Failed to load data"); }
     setLoading(false);
   };
+
+  useEffect(() => {
+    // Validate session server-side — catches expired/tampered tokens
+    validateSession("admin").then(({ valid }) => {
+      if (!valid) {
+        clearSession();
+        router.push("/admin/login");
+        return;
+      }
+      fetchAll();
+    });
+  }, []);
 
   const handleLogout = () => { localStorage.clear(); router.push("/admin/login"); };
 
@@ -198,12 +233,12 @@ export default function AdminDashboard() {
       setAnnForm({ title: "", body: "", isImportant: false }); 
       setEditAnn(null); 
       setShowAnnModal(false);
-      fetchAll(); 
+      fetchAll(true); 
     }
   };
   const deleteAnn = (id) => setConfirm({ msg: "Are you sure you want to delete this announcement?", onOk: async () => {
     await fetch(`${API}/api/announcements/${id}`, { method: "DELETE", headers: H });
-    flash("✅ Announcement deleted"); setConfirm(null); fetchAll();
+    flash("✅ Announcement deleted"); setConfirm(null); fetchAll(true);
   }});
   const startEditAnn = (a) => { setEditAnn(a); setAnnForm({ title: a.title, body: a.body, isImportant: a.isImportant }); setShowAnnModal(true); };
 
@@ -213,21 +248,21 @@ export default function AdminDashboard() {
     Object.entries(noteForm).forEach(([k, v]) => fd.append(k, v));
     fd.append("pdf", noteFile);
     const res = await fetch(`${API}/api/notes`, { method: "POST", headers: H, body: fd });
-    if (res.ok) { flash("✅ Uploaded!"); setNoteForm({ title: "", subject: "", className: "", course: "" }); setNoteFile(null); if (fileRef.current) fileRef.current.value = ""; fetchAll(); }
+    if (res.ok) { flash("✅ Uploaded!"); setNoteForm({ title: "", subject: "", className: "", course: "" }); setNoteFile(null); if (fileRef.current) fileRef.current.value = ""; fetchAll(true); }
     else { const d = await res.json(); flash("❌ " + d.message); }
   };
   const deleteNote = (id) => setConfirm({ msg: "Are you sure you want to delete this note?", onOk: async () => {
     await fetch(`${API}/api/notes/${id}`, { method: "DELETE", headers: H });
-    flash("✅ Note deleted"); setConfirm(null); fetchAll();
+    flash("✅ Note deleted"); setConfirm(null); fetchAll(true);
   }});
   
   const updateStudentFee = async (id, feeStatus) => { 
     await fetch(`${API}/api/admin/students/${id}/fee`, { method: "PUT", headers: JH, body: JSON.stringify({ feeStatus }) }); 
-    fetchAll(); 
+    fetchAll(true); 
   };
   const deleteStudent = (id) => setConfirm({ msg: "Are you sure you want to delete this student?", onOk: async () => {
     await fetch(`${API}/api/admin/students/${id}`, { method: "DELETE", headers: H });
-    flash("✅ Student deleted"); setConfirm(null); fetchAll();
+    flash("✅ Student deleted"); setConfirm(null); fetchAll(true);
   }});
 
   // Get current breadcrumb active item
@@ -308,7 +343,18 @@ export default function AdminDashboard() {
   const pendingFees = fees.filter((f) => f.status !== "Paid");
   const recentStudents = [...students].slice(0, 5);
   const recentAnnouncements = [...announcements].slice(0, 3);
-  const isExpanded = !sidebarCollapsed || sidebarHovered;
+  const isExpanded = !sidebarCollapsed;
+
+  // Persist sidebar state to localStorage whenever it changes
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("adminSidebarCollapsed", String(next));
+      }
+      return next;
+    });
+  };
 
   return (
     <div className={`min-h-screen font-[family-name:var(--font-mulish)] flex text-slate-800 ${darkMode ? 'dark bg-[#0B0F19] text-slate-100' : 'bg-[#F1F5F9] text-slate-850'}`}>
@@ -330,8 +376,6 @@ export default function AdminDashboard() {
 
       {/* Premium Glassmorphic Left Sidebar */}
       <aside 
-        onMouseEnter={() => setSidebarHovered(true)}
-        onMouseLeave={() => setSidebarHovered(false)}
         className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 ${isExpanded ? "w-[260px]" : "w-[76px]"} bg-white dark:bg-slate-900 border-r border-slate-200/50 dark:border-slate-800/60 flex flex-col transition-all duration-300 h-screen ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} shadow-sm`}
       >
         <div className={`p-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center ${!isExpanded ? "justify-center" : "justify-between"}`}>
@@ -344,7 +388,7 @@ export default function AdminDashboard() {
             <span className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm">CG</span>
           )}
           <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+            onClick={toggleSidebar}
             className="hidden lg:flex p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors cursor-pointer" 
             aria-label="Toggle sidebar"
           >
@@ -414,17 +458,18 @@ export default function AdminDashboard() {
 
           {/* Actions Panel */}
           <div className="flex items-center gap-3">
-            {/* Search widget with stronger presence */}
-            <div className="hidden sm:flex items-center gap-2.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-205 dark:border-slate-800 rounded-xl px-3 h-10 w-96 focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 dark:focus:ring-blue-500/5 focus-within:bg-white dark:focus-within:bg-slate-950 transition-all">
-              <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-              <input 
-                placeholder="Search catalog, students, schedules..." 
-                className="bg-transparent border-0 outline-none text-xs w-full text-slate-750 dark:text-slate-205 focus:ring-0 font-bold placeholder-slate-450 dark:placeholder-slate-500"
-              />
-              <kbd className="hidden md:inline-flex items-center gap-0.5 select-none rounded border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-400 dark:text-slate-500 shadow-sm">
-                <span>⌘</span>K
-              </kbd>
-            </div>
+            {/* Global Search — fully functional command palette */}
+            <GlobalSearch
+              token={token}
+              onNavigate={(tab, itemId) => {
+                setTab(tab);
+                // Optionally: store itemId in URL for deep-linking
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("tab", tab);
+                if (itemId) params.set("highlight", itemId);
+                router.push(`/admin?${params.toString()}`, { scroll: false });
+              }}
+            />
 
             {/* Dark Mode toggle */}
             <button 
@@ -465,7 +510,44 @@ export default function AdminDashboard() {
         <main className="flex-1 p-4 overflow-y-auto space-y-4">
 
           {/* 1. OVERVIEW DASHBOARD TAB */}
-          {tab === "overview" && (
+          {tab === "overview" && loading && !_dashboardCache && (
+            <div className="space-y-4">
+              {/* KPI Skeleton */}
+              <div className="bg-blue-50 dark:bg-blue-950/25 border border-blue-200/45 dark:border-blue-900/35 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="h-3 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 h-[126px] flex flex-col justify-between">
+                      <div className="flex justify-between items-center">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                        <div className="w-8 h-5 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                      </div>
+                      <div className="w-16 h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                      <div className="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div className="w-12 h-3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                        <div className="w-10 h-4 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Analytics skeleton */}
+              <div className="bg-slate-200/50 dark:bg-slate-900/45 border border-slate-300/30 dark:border-slate-800/40 rounded-3xl p-6 space-y-4">
+                <div className="h-3 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 h-64 animate-pulse" />
+              </div>
+              {/* Operational skeleton */}
+              <div className="bg-emerald-50 dark:bg-emerald-950/15 border border-emerald-200/45 dark:border-emerald-900/35 rounded-3xl p-6 space-y-4">
+                <div className="h-3 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 h-40 animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {tab === "overview" && !(loading && !_dashboardCache) && (
             <div className="space-y-4">
               <div className="flex justify-between items-center bg-white/60 dark:bg-slate-900/35 border border-slate-200/40 dark:border-slate-850/50 rounded-xl py-1.5 px-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] backdrop-blur-sm">
                 <div className="flex items-center gap-3">
@@ -1016,13 +1098,13 @@ export default function AdminDashboard() {
           )}
 
           {/* 3. OTHER MODULES TABS */}
-          {tab === "teachers" && <TeachersTab teachers={teachers} batches={batches} schedules={schedules} token={token} onRefresh={fetchAll} flash={flash} />}
-          {tab === "batches" && <BatchesTab batches={batches} teachers={teachers} courses={courses} students={students} token={token} onRefresh={fetchAll} flash={flash} />}
-          {tab === "schedules" && <SchedulesTab schedules={schedules} batches={batches} teachers={teachers} token={token} onRefresh={fetchAll} flash={flash} />}
-          {tab === "fees" && <FeeTab fees={fees} students={students} batches={batches} courses={courses} token={token} onRefresh={fetchAll} flash={flash} />}
-          {tab === "courses" && <CoursesTab courses={courses} token={token} onRefresh={fetchAll} flash={flash} />}
-          {tab === "achievers" && <AchieversTab achievers={achievers} token={token} onRefresh={fetchAll} flash={flash} />}
-          {tab === "payments" && <PaymentsTab token={token} flash={flash} />}
+          {tab === "teachers" && <TeachersTab teachers={teachers} batches={batches} schedules={schedules} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
+          {tab === "batches" && <BatchesTab batches={batches} teachers={teachers} courses={courses} students={students} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
+          {tab === "schedules" && <SchedulesTab schedules={schedules} batches={batches} teachers={teachers} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
+          {tab === "fees" && <FeeTab fees={fees} students={students} batches={batches} courses={courses} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
+          {tab === "courses" && <CoursesTab courses={courses} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
+          {tab === "achievers" && <AchieversTab achievers={achievers} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
+          {tab === "payments" && <PaymentsTab token={token} payments={payments} loading={loading} onRefresh={() => fetchAll(true)} flash={flash} />}
 
           {/* ANNOUNCEMENTS REDESIGNED TAB */}
           {tab === "announcements" && (
@@ -1353,5 +1435,21 @@ export default function AdminDashboard() {
         </main>
       </div>
     </div>
+  );
+}
+
+// Suspense wrapper required by Next.js App Router for useSearchParams
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F1F5F9] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-slate-500 font-bold text-sm">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
+      <AdminDashboardInner />
+    </Suspense>
   );
 }
