@@ -9,6 +9,8 @@ const paymentSchema = new mongoose.Schema(
     razorpayPaymentId: { type: String },
     status: { type: String, enum: ["created", "paid", "failed"], default: "created" },
     receipt: { type: String },
+    ledgerId: { type: mongoose.Schema.Types.ObjectId, ref: "FeeLedger" },
+    month: { type: String },
   },
   { timestamps: true }
 );

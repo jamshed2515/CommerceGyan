@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { clearSession, getStoredUser } from "@/lib/auth";
+import { clearSession, getStoredUser, getStoredToken } from "@/lib/auth";
 
 export default function Header() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function Header() {
   // Read auth state on mount (client-only to avoid SSR mismatch)
   useEffect(() => {
     const user = getStoredUser();
-    const token = localStorage.getItem("token");
+    const token = getStoredToken();
     if (user && token) {
       setAuthUser(user);
     } else {
@@ -44,7 +44,7 @@ export default function Header() {
     e.preventDefault();
     setIsProfileOpen(false);
     const user = getStoredUser();
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token = getStoredToken();
     if (user && token) {
       if (user.role === "admin") router.push("/admin");
       else if (user.role === "teacher") router.push("/teacher");

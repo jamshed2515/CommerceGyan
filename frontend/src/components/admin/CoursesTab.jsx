@@ -40,7 +40,7 @@ export default function CoursesTab({ courses, token, onRefresh, flash }) {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(BLANK);
+    setForm({ ...BLANK, feeType: "one_time", monthlyFee: "", courseFee: "" });
     setShowModal(true);
   };
 
@@ -51,6 +51,9 @@ export default function CoursesTab({ courses, token, onRefresh, flash }) {
       category: c.targetAudience || "School",
       price: c.price || "",
       description: c.description || "",
+      feeType: c.feeType || "one_time",
+      monthlyFee: c.monthlyFee !== undefined ? String(c.monthlyFee) : (c.feeType === "monthly" ? String(c.price) : ""),
+      courseFee: c.courseFee !== undefined ? String(c.courseFee) : (c.feeType !== "monthly" ? String(c.price) : ""),
     });
     setShowModal(true);
   };
@@ -61,17 +64,24 @@ export default function CoursesTab({ courses, token, onRefresh, flash }) {
     setForm(BLANK);
   };
 
-  const valid = form.title?.trim() && form.category && form.price !== "";
+  const valid =
+    form.title?.trim() &&
+    form.category &&
+    (form.feeType === "monthly" ? form.monthlyFee !== "" : form.courseFee !== "");
 
   const save = async () => {
-    if (!valid) return flash("❌ Course name, category, and monthly fee are required");
+    if (!valid) return flash("❌ Course name, category, and fee details are required");
     setSaving(true);
     const url = editing ? `${API}/api/courses/${editing._id}` : `${API}/api/courses`;
+    const calculatedPrice = form.feeType === "monthly" ? Number(form.monthlyFee) : Number(form.courseFee);
     const body = {
       title: form.title.trim(),
       description: form.description.trim(),
       targetAudience: form.category,
-      price: Number(form.price),
+      price: calculatedPrice,
+      feeType: form.feeType,
+      monthlyFee: form.feeType === "monthly" ? Number(form.monthlyFee) : 0,
+      courseFee: form.feeType === "one_time" ? Number(form.courseFee) : 0,
     };
     const res = await fetch(url, { method: editing ? "PUT" : "POST", headers: H, body: JSON.stringify(body) });
     setSaving(false);
@@ -226,17 +236,21 @@ export default function CoursesTab({ courses, token, onRefresh, flash }) {
                       </p>
                     )}
 
-                    {/* Monthly Fee — primary element */}
+                    {/* Course Fee — primary element */}
                     <div className="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-end justify-between gap-2">
                       <div>
-                        <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Monthly Fee</p>
+                        <p className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">
+                          {c.feeType === "monthly" ? "Monthly Fee" : "One-Time Fee"}
+                        </p>
                         <p className="text-xl font-black text-slate-800 dark:text-slate-100 leading-none">
-                          ₹{Number(c.price).toLocaleString()}
-                          <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 ml-1">/ month</span>
+                          ₹{Number(c.price || 0).toLocaleString("en-IN")}
+                          {c.feeType === "monthly" && (
+                            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-550 ml-1">/ month</span>
+                          )}
                         </p>
                       </div>
                       <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-center border border-slate-100 dark:border-slate-800/80 shrink-0">
-                        <BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        <BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-550" />
                       </div>
                     </div>
                   </div>
@@ -288,19 +302,44 @@ export default function CoursesTab({ courses, token, onRefresh, flash }) {
                   </select>
                 </Field>
 
-                <Field label="Monthly Fee (₹)" required>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 pointer-events-none">₹</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={form.price}
-                      onChange={(e) => setForm({ ...form, price: e.target.value })}
-                      className={`${inp} !pl-7`}
-                      placeholder="1500"
-                    />
-                  </div>
+                <Field label="Fee Type" required>
+                  <select value={form.feeType || "one_time"} onChange={(e) => setForm({ ...form, feeType: e.target.value })} className={inp}>
+                    <option value="one_time">One-Time Fee</option>
+                    <option value="monthly">Monthly Recurring</option>
+                  </select>
                 </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {form.feeType === "monthly" ? (
+                  <Field label="Monthly Fee (₹)" required>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 pointer-events-none">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.monthlyFee}
+                        onChange={(e) => setForm({ ...form, monthlyFee: e.target.value })}
+                        className={`${inp} !pl-7`}
+                        placeholder="1500"
+                      />
+                    </div>
+                  </Field>
+                ) : (
+                  <Field label="Course Fee (₹)" required>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 pointer-events-none">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.courseFee}
+                        onChange={(e) => setForm({ ...form, courseFee: e.target.value })}
+                        className={`${inp} !pl-7`}
+                        placeholder="5000"
+                      />
+                    </div>
+                  </Field>
+                )}
               </div>
 
               <Field label="Description">

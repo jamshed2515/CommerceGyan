@@ -17,15 +17,19 @@ router.get("/", async (req, res) => {
 // Create a new course (Admin only)
 router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { title, description, targetAudience, price, isFeatured, syllabus } = req.body;
-    if (!title || !description || !targetAudience || price === undefined) {
+    const { title, description, targetAudience, price, feeType, monthlyFee, courseFee, isFeatured, syllabus } = req.body;
+    if (!title || !description || !targetAudience) {
       return res.status(400).json({ message: "Missing required fields" });
     }
+    const finalPrice = price !== undefined ? price : (feeType === "monthly" ? (monthlyFee || 0) : (courseFee || 0));
     const course = new Course({
       title,
       description,
       targetAudience,
-      price,
+      price: finalPrice,
+      feeType: feeType || "one_time",
+      monthlyFee: Number(monthlyFee || 0),
+      courseFee: Number(courseFee || 0),
       isFeatured: !!isFeatured,
       syllabus: Array.isArray(syllabus) ? syllabus : [],
     });
@@ -39,7 +43,7 @@ router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
 // Update a course (Admin only)
 router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { title, description, targetAudience, price, isFeatured, syllabus } = req.body;
+    const { title, description, targetAudience, price, feeType, monthlyFee, courseFee, isFeatured, syllabus } = req.body;
     const course = await Course.findById(req.params.id);
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -47,7 +51,17 @@ router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
     if (title !== undefined) course.title = title;
     if (description !== undefined) course.description = description;
     if (targetAudience !== undefined) course.targetAudience = targetAudience;
-    if (price !== undefined) course.price = price;
+    if (feeType !== undefined) course.feeType = feeType;
+    if (monthlyFee !== undefined) course.monthlyFee = Number(monthlyFee);
+    if (courseFee !== undefined) course.courseFee = Number(courseFee);
+    if (price !== undefined) {
+      course.price = price;
+    } else if (feeType !== undefined || monthlyFee !== undefined || courseFee !== undefined) {
+      const ft = feeType !== undefined ? feeType : course.feeType;
+      const mf = monthlyFee !== undefined ? Number(monthlyFee) : course.monthlyFee;
+      const cf = courseFee !== undefined ? Number(courseFee) : course.courseFee;
+      course.price = ft === "monthly" ? mf : cf;
+    }
     if (isFeatured !== undefined) course.isFeatured = !!isFeatured;
     if (syllabus !== undefined) course.syllabus = Array.isArray(syllabus) ? syllabus : [];
 

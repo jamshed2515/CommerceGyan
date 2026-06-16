@@ -16,7 +16,7 @@ const razorpay = new Razorpay({
 // POST create order (protected student)
 router.post("/create-order", authMiddleware, async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, ledgerId, month } = req.body;
     if (!amount) return res.status(400).json({ message: "Amount required" });
     const receipt = `rcpt_${Date.now()}`;
     const options = { amount: amount * 100, currency: "INR", receipt };
@@ -31,6 +31,8 @@ router.post("/create-order", authMiddleware, async (req, res) => {
       razorpayOrderId: order.id,
       status: "created",
       receipt,
+      ledgerId: ledgerId || null,
+      month: month || null,
     });
     await payment.save();
 
@@ -55,13 +57,93 @@ router.post("/verify", authMiddleware, async (req, res) => {
     }
 
     // Update payment doc
-    await Payment.findByIdAndUpdate(paymentDocId, {
-      razorpayPaymentId: razorpay_payment_id,
-      status: "paid",
-    });
+    const updatedPayment = await Payment.findByIdAndUpdate(
+      paymentDocId,
+      { razorpayPaymentId: razorpay_payment_id, status: "paid" },
+      { new: true }
+    );
 
     // Update user feeStatus
     await User.findByIdAndUpdate(req.user.id, { feeStatus: "paid" });
+
+    // Link online payment to FeeLedger and MonthlyFeeStatement if present
+    if (updatedPayment && updatedPayment.ledgerId && updatedPayment.month) {
+      const FeeLedger = require("../models/FeeLedger");
+      const MonthlyFeeStatement = require("../models/MonthlyFeeStatement");
+      const FeePayment = require("../models/FeePayment");
+      const Receipt = require("../models/Receipt");
+
+      const ledger = await FeeLedger.findById(updatedPayment.ledgerId);
+      if (ledger) {
+        const statement = await MonthlyFeeStatement.findOne({
+          ledger: ledger._id,
+          month: updatedPayment.month,
+        });
+
+        if (statement) {
+          const payAmount = updatedPayment.amount;
+
+          // 1. Create FeePayment transaction log
+          const feePayment = new FeePayment({
+            student: ledger.student,
+            ledger: ledger._id,
+            statement: statement._id,
+            amount: payAmount,
+            mode: "Razorpay",
+            date: new Date(),
+            reference: razorpay_payment_id || updatedPayment.razorpayOrderId,
+            remarks: `Online Payment (Razorpay) for ${updatedPayment.month}.`,
+            collectedBy: "Online",
+          });
+          await feePayment.save();
+
+          // 2. Update statement paidAmount
+          statement.paidAmount += payAmount;
+          statement.pendingAmount = Math.max(0, statement.dueAmount - statement.paidAmount);
+          if (statement.pendingAmount === 0) {
+            statement.status = "Paid";
+          } else if (statement.paidAmount > 0) {
+            statement.status = "Partial";
+          } else {
+            statement.status = "Due";
+          }
+          await statement.save();
+
+          // 3. Update overall ledger status
+          const allStatements = await MonthlyFeeStatement.find({ ledger: ledger._id });
+          const allPaid = allStatements.every((s) => s.status === "Paid");
+          const anyPaidOrPartial = allStatements.some((s) => s.paidAmount > 0);
+
+          if (allPaid) {
+            ledger.status = "Paid";
+          } else if (anyPaidOrPartial) {
+            ledger.status = "Partial";
+          } else {
+            ledger.status = "Due";
+          }
+          await ledger.save();
+
+          // 4. Create printable digital Receipt
+          const yPrefix = new Date().getFullYear().toString().slice(-2);
+          const rNumber = `REC${yPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          const totalPendingAmount = allStatements.reduce((sum, s) => sum + s.pendingAmount, 0);
+
+          const receipt = new Receipt({
+            receiptNo: rNumber,
+            payment: feePayment._id,
+            student: ledger.student,
+            course: ledger.course,
+            month: updatedPayment.month,
+            amountPaid: payAmount,
+            paymentMode: "Razorpay",
+            referenceNumber: razorpay_payment_id || "",
+            remainingBalance: totalPendingAmount,
+            date: feePayment.date,
+          });
+          await receipt.save();
+        }
+      }
+    }
 
     res.json({ message: "Payment verified successfully" });
   } catch (err) {

@@ -205,7 +205,11 @@ export default function FeeTab({ fees, students, batches, courses, token, onRefr
               <Field label="Select Student" required>
                 <select value={form.student} onChange={e => setForm({ ...form, student: e.target.value })} className={inp}>
                   <option value="">Choose Student</option>
-                  {students.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                  {students.map(s => (
+                    <option key={s._id} value={s._id}>
+                      {s.name} {s.registrationNumber ? `(${s.registrationNumber})` : ""}
+                    </option>
+                  ))}
                 </select>
               </Field>
 

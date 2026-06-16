@@ -2,33 +2,69 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Lead = require("../models/Lead");
 const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "commerce_giyan_secret";
 
-// Register student
+// Register student (Creates an Admission Lead, not a Student directly)
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, phone, stream, className, address } = req.body;
+    const { name, email, password, phone, stream, className, address, interestedCourse } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Name, email and password are required" });
     }
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ message: "Email already registered" });
+
+    // Check for duplicate account / application using both email and phone
+    const userQuery = { email };
+    const leadQuery = { email };
+    if (phone) {
+      userQuery.$or = [{ email }, { phone }];
+      leadQuery.$or = [{ email }, { phone }];
+    }
+
+    const existingUser = await User.findOne(userQuery);
+    if (existingUser) {
+      return res.status(400).json({ message: "An account with this email or phone number already exists" });
+    }
+
+    const existingLead = await Lead.findOne(leadQuery);
+    if (existingLead) {
+      return res.status(400).json({ message: "An admission application with this email or phone number is already pending" });
+    }
+
+    // Generate Lead ID CGL26XXXX
+    const year = new Date().getFullYear() % 100;
+    const prefix = `CGL${year}`;
+    const lastLead = await Lead.findOne({ leadId: new RegExp(`^${prefix}`) }).sort({ leadId: -1 });
+    let nextNum = 1;
+    if (lastLead && lastLead.leadId) {
+      const lastNumStr = lastLead.leadId.replace(prefix, "");
+      const lastNum = parseInt(lastNumStr, 10);
+      if (!isNaN(lastNum)) {
+        nextNum = lastNum + 1;
+      }
+    }
+    const leadId = `${prefix}${String(nextNum).padStart(4, "0")}`;
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
-      name, email, password: hashedPassword,
-      phone: phone || "", stream: stream || "",
-      className: className || "", address: address || "",
-      role: "student",
+    const lead = new Lead({
+      leadId,
+      name,
+      email,
+      password: hashedPassword,
+      phone: phone || "",
+      stream: stream || "",
+      className: className || "",
+      interestedCourse: interestedCourse || "",
+      status: "Pending",
     });
-    await user.save();
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    await lead.save();
+
     res.status(201).json({
-      message: "Registration successful",
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      message: "Registration application submitted successfully! Your application is under review by the admissions team.",
+      leadId,
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -40,7 +76,7 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res.status(400).json({ message: "Identifier (Email/Reg No/Mobile) and password are required" });
     }
     // Admin env credentials check
     const adminEmail = process.env.ADMIN_EMAIL || "admin@commercegiyan.com";
@@ -54,8 +90,15 @@ router.post("/login", async (req, res) => {
       });
     }
     // DB user login (student or teacher)
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid email or password" });
+    // Find user by email, registrationNumber, or phone
+    const user = await User.findOne({
+      $or: [
+        { email: email },
+        { registrationNumber: email },
+        { phone: email }
+      ]
+    });
+    if (!user) return res.status(400).json({ message: "Invalid credentials or account not found" });
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
@@ -116,7 +159,14 @@ router.get("/me", authMiddleware, async (req, res) => {
     }
     const user = await User.findById(req.user.id)
       .select("-password")
-      .populate("batch", "batchName timing teacher");
+      .populate("batch", "batchName timing teacher")
+      .populate({
+        path: "assignedBatches",
+        populate: [
+          { path: "course", select: "title price" },
+          { path: "teacher", select: "name subject email phone" }
+        ]
+      });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (err) {

@@ -3,7 +3,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import API from "@/config/api";
-import { validateSession, clearSession } from "@/lib/auth";
+import { validateSession, clearSession, getStoredToken } from "@/lib/auth";
+import ReceiptGenerator from "@/components/admin/finance/components/ReceiptGenerator";
+
+const statusCls = {
+  Paid: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30",
+  Partial: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
+  Due: "bg-red-50 text-red-650 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
+  Overdue: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60 font-black",
+  Upcoming: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30",
+};
+
 const NAV = [
   { id: "overview", icon: "🏠", label: "Dashboard" },
   { id: "courses", icon: "📚", label: "My Courses" },
@@ -28,8 +38,9 @@ export default function StudentDashboard() {
   const [profileForm, setProfileForm] = useState({ name: "", phone: "", address: "" });
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "" });
   const [toast, setToast] = useState("");
+  const [printingReceipt, setPrintingReceipt] = useState(null);
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token = typeof window !== "undefined" ? getStoredToken() : null;
   const H = { Authorization: `Bearer ${token}` };
 
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3000); };
@@ -42,7 +53,7 @@ export default function StudentDashboard() {
         router.push("/login");
         return;
       }
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
       const H = { Authorization: `Bearer ${token}` };
       Promise.all([
         Promise.resolve(freshUser), // already validated above
@@ -51,11 +62,26 @@ export default function StudentDashboard() {
         fetch(`${API}/api/notes`, { headers: H }).then(r => r.json()),
       ]).then(([u, a, f, n]) => {
         setUser(u);
-        setProfileForm({ name: u.name || "", phone: u.phone || "", address: u.address || "" });
+        setProfileForm({
+          name: u.name || "",
+          phone: u.phone || "",
+          address: u.address || "",
+          parentName: u.parentName || "",
+          parentPhone: u.parentPhone || "",
+        });
         setAnnouncements(Array.isArray(a) ? a : []);
         setFees(Array.isArray(f) ? f : []);
         setNotes(Array.isArray(n) ? n : []);
-        if (u.batch?._id || u.batch) {
+
+        const batches = u.assignedBatches || [];
+        if (batches.length > 0) {
+          const batchIds = batches.map(b => b._id || b).join(",");
+          fetch(`${API}/api/schedules?batch=${batchIds}`, { headers: H }).then(r => r.json()).then(s => {
+            setSchedules(Array.isArray(s) ? s : []);
+          });
+          // Set primary batch for compatibility
+          setBatch(batches[0]);
+        } else if (u.batch?._id || u.batch) {
           const bId = u.batch?._id || u.batch;
           fetch(`${API}/api/schedules?batch=${bId}`, { headers: H }).then(r => r.json()).then(s => {
             setSchedules(Array.isArray(s) ? s : []);
@@ -82,10 +108,178 @@ export default function StudentDashboard() {
     if (res.ok) setPwForm({ currentPassword: "", newPassword: "" });
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—";
+    const dateObj = new Date(dateStr);
+    const day = dateObj.getDate();
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = months[dateObj.getMonth()];
+    const year = dateObj.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "—";
+    const dateObj = new Date(dateStr);
+    let hours = dateObj.getHours();
+    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return "—";
+    return `${formatDate(dateStr)}, ${formatTime(dateStr)}`;
+  };
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayOnline = async (ledger, statement) => {
+    try {
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        flash("❌ Razorpay SDK failed to load. Are you online?");
+        return;
+      }
+
+      const token = getStoredToken();
+      const res = await fetch(`${API}/api/payments/create-order`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: statement.pendingAmount,
+          ledgerId: ledger._id,
+          month: statement.month,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to create order");
+      }
+
+      const orderData = await res.json();
+
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Commerce Gyan",
+        description: `Fee Payment for ${statement.month}`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          try {
+            const verifyRes = await fetch(`${API}/api/payments/verify`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentDocId: orderData.paymentDocId,
+              }),
+            });
+
+            if (verifyRes.ok) {
+              flash("🎉 Payment successful & verified!");
+              const updatedFeesRes = await fetch(`${API}/api/fees/my`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (updatedFeesRes.ok) {
+                const updatedFees = await updatedFeesRes.json();
+                setFees(Array.isArray(updatedFees) ? updatedFees : []);
+              }
+            } else {
+              const errData = await verifyRes.json();
+              flash(`❌ Verification failed: ${errData.message || "Unknown error"}`);
+            }
+          } catch (verifyErr) {
+            flash("❌ Verification process failed");
+            console.error(verifyErr);
+          }
+        },
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
+        },
+        theme: {
+          color: "#1A3B70",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      flash(`❌ Order failed: ${err.message}`);
+      console.error(err);
+    }
+  };
+
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const today = days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
   const todaySchedule = schedules.filter(s => s.dayOfWeek === today);
   const feeRec = fees[0];
+
+  const getNotificationAlerts = () => {
+    const alerts = [];
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    fees.forEach(ledger => {
+      const courseTitle = ledger.course?.title || "Enrolled Course";
+      (ledger.monthlyBills || []).forEach(stmt => {
+        if (stmt.status === "Paid" || stmt.pendingAmount <= 0) return;
+        
+        const due = new Date(stmt.dueDate);
+        const dueStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+        
+        const diffTime = dueStart.getTime() - todayStart.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0 || stmt.status === "Overdue") {
+          alerts.push({
+            type: "danger",
+            message: `⚠️ Fee statement for ${courseTitle} (${stmt.month}) is OVERDUE! Pending: ₹${stmt.pendingAmount.toLocaleString("en-IN")}. Please clear it immediately.`,
+            id: `overdue-${stmt._id}`
+          });
+        } else if (diffDays === 0) {
+          alerts.push({
+            type: "warning",
+            message: `⏰ Fee statement of ₹${stmt.pendingAmount.toLocaleString("en-IN")} for ${courseTitle} (${stmt.month}) is due TODAY!`,
+            id: `today-${stmt._id}`
+          });
+        } else if (diffDays > 0 && diffDays <= 5) {
+          alerts.push({
+            type: "info",
+            message: `ℹ️ Fee statement of ₹${stmt.pendingAmount.toLocaleString("en-IN")} for ${courseTitle} (${stmt.month}) is due in ${diffDays} day${diffDays > 1 ? "s" : ""}.`,
+            id: `upcoming-${stmt._id}`
+          });
+        }
+      });
+    });
+    return alerts;
+  };
 
   const inp = "w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-[#00AEEF] outline-none text-sm bg-gray-50 focus:bg-white transition-all";
   const card = "bg-white rounded-2xl border border-gray-100 shadow-sm p-5";
@@ -150,14 +344,37 @@ export default function StudentDashboard() {
         </header>
 
         <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-20 lg:pb-6">
+          {/* Alerts Banner */}
+          {(() => {
+            const alerts = getNotificationAlerts();
+            if (alerts.length === 0) return null;
+            return (
+              <div className="mb-6 space-y-3">
+                {alerts.map(alert => (
+                  <div key={alert.id} className={`p-4 rounded-xl border flex items-center justify-between shadow-sm transition-all duration-150 ${
+                    alert.type === "danger" ? "bg-red-50 border-red-200 text-red-800" :
+                    alert.type === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
+                    "bg-blue-50 border-blue-200 text-blue-800"
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">
+                        {alert.type === "danger" ? "🚨" : alert.type === "warning" ? "⏰" : "ℹ️"}
+                      </span>
+                      <p className="text-sm font-bold">{alert.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* ── OVERVIEW ── */}
           {tab === "overview" && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: "Enrolled Course", val: batch?.course?.title || (user?.stream || "—"), color: "text-[#1A3B70]", bg: "bg-blue-50", icon: "📚" },
-                  { label: "Batch Timing", val: batch?.timing || user?.batch?.timing || "Not assigned", color: "text-[#00AEEF]", bg: "bg-cyan-50", icon: "⏰" },
+                  { label: "Enrolled Courses", val: user?.assignedBatches?.map(b => b.course?.title).filter(Boolean).join(", ") || batch?.course?.title || (user?.stream || "—"), color: "text-[#1A3B70]", bg: "bg-blue-50", icon: "📚" },
+                  { label: "Batch Timings", val: user?.assignedBatches?.map(b => b.timing).filter(Boolean).join(" | ") || batch?.timing || user?.batch?.timing || "Not assigned", color: "text-[#00AEEF]", bg: "bg-cyan-50", icon: "⏰" },
                   { label: "Today's Classes", val: todaySchedule.length, color: "text-green-600", bg: "bg-green-50", icon: "📅" },
                   { label: "Announcements", val: announcements.length, color: "text-orange-500", bg: "bg-orange-50", icon: "📢" },
                 ].map((c, i) => (
@@ -216,7 +433,38 @@ export default function StudentDashboard() {
           {/* ── MY COURSES ── */}
           {tab === "courses" && (
             <div className="space-y-4">
-              {batch ? (
+              {user?.assignedBatches && user.assignedBatches.length > 0 ? (
+                user.assignedBatches.map((b) => (
+                  <div key={b._id} className={`${card} mb-4`}>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-14 h-14 bg-[#E6F4FE] rounded-xl flex items-center justify-center text-3xl">📚</div>
+                      <div>
+                        <h2 className="font-black text-[#1A3B70] text-xl">{b.course?.title || "—"}</h2>
+                        <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">ENROLLED</span>
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {[
+                        ["Batch", b.batchName],
+                        ["Timing", b.timing || "—"],
+                        ["Teacher", b.teacher?.name || "—"],
+                        ["Course Fee", b.course?.price ? `₹${b.course.price}` : "—"],
+                      ].map(([l, v]) => (
+                        <div key={l} className="bg-[#F4F9FF] rounded-xl p-4">
+                          <p className="text-xs font-bold text-gray-400 uppercase">{l}</p>
+                          <p className="font-bold text-[#1A3B70] mt-1">{v}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {b.course?.description && (
+                      <div className="mt-4 bg-gray-50 rounded-xl p-4">
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">Description</p>
+                        <p className="text-sm text-gray-600">{b.course.description}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : batch ? (
                 <div className={card}>
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-14 h-14 bg-[#E6F4FE] rounded-xl flex items-center justify-center text-3xl">📚</div>
@@ -346,7 +594,20 @@ export default function StudentDashboard() {
           {/* ── FACULTY ── */}
           {tab === "faculty" && (
             <div className="space-y-4">
-              {batch?.teacher ? (
+              {user?.assignedBatches && user.assignedBatches.length > 0 ? (
+                user.assignedBatches.map((b) => b.teacher && (
+                  <div key={b._id} className={`${card} flex items-center gap-6 mb-4`}>
+                    <div className="w-16 h-16 bg-[#1A3B70] text-white rounded-full flex items-center justify-center font-black text-2xl flex-shrink-0">
+                      {b.teacher.name?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 className="font-black text-[#1A3B70] text-xl">{b.teacher.name}</h2>
+                      <p className="text-gray-500 text-sm">{b.teacher.subject || b.course?.title || "Commerce & Professional"}</p>
+                      {b.teacher.phone && <p className="text-[#00AEEF] text-sm font-bold mt-1">📞 {b.teacher.phone}</p>}
+                    </div>
+                  </div>
+                ))
+              ) : batch?.teacher ? (
                 <div className={`${card} flex items-center gap-6`}>
                   <div className="w-16 h-16 bg-[#1A3B70] text-white rounded-full flex items-center justify-center font-black text-2xl flex-shrink-0">
                     {batch.teacher.name?.[0]?.toUpperCase()}
@@ -365,39 +626,203 @@ export default function StudentDashboard() {
 
           {/* ── FEE STATUS ── */}
           {tab === "fees" && (
-            <div className="space-y-4">
-              {feeRec ? (
-                <>
-                  <div className={`${card} border-2 ${feeRec.status === "Paid" ? "border-green-400" : feeRec.status === "PartialPaid" ? "border-yellow-400" : "border-red-400"}`}>
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="text-5xl">{feeRec.status === "Paid" ? "✅" : feeRec.status === "PartialPaid" ? "⚠️" : "❌"}</span>
-                      <div>
-                        <h2 className="font-black text-[#1A3B70] text-xl">Fee Status</h2>
-                        <span className={`text-sm font-black px-3 py-1 rounded-full ${feeRec.status === "Paid" ? "bg-green-100 text-green-700" : feeRec.status === "PartialPaid" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>{feeRec.status.toUpperCase()}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {[
-                        ["Total Fees", `₹${feeRec.totalFees}`, "text-[#1A3B70]"],
-                        ["Paid", `₹${feeRec.paidAmount}`, "text-green-600"],
-                        ["Remaining", `₹${feeRec.remainingAmount}`, "text-red-500"],
-                      ].map(([l, v, c]) => (
-                        <div key={l} className="bg-[#F4F9FF] rounded-xl p-4 text-center">
-                          <p className={`text-2xl font-black ${c}`}>{v}</p>
-                          <p className="text-xs text-gray-500 font-bold mt-1">{l}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {feeRec.notes && <div className="mt-4 bg-gray-50 rounded-xl p-3 text-sm text-gray-600"><strong>Note:</strong> {feeRec.notes}</div>}
-                    <p className="text-xs text-gray-400 mt-3">Last updated: {new Date(feeRec.lastUpdated).toLocaleDateString("en-IN")}</p>
-                  </div>
-                  <div className={card}>
-                    <p className="text-sm text-gray-600">📞 For fee queries contact: <strong className="text-[#1A3B70]">+91 8271365450</strong></p>
-                  </div>
-                </>
+            <div className="space-y-8">
+              {fees.length === 0 ? (
+                <div className={`${card} text-center py-16`}>
+                  <p className="text-4xl mb-3">💰</p>
+                  <p className="font-bold text-gray-500">No active fee account assigned.</p>
+                  <p className="text-sm text-gray-400 mt-1">Please contact the administration center to set up your fee account.</p>
+                </div>
               ) : (
-                <div className={`${card} text-center py-16`}><p className="text-4xl mb-3">💰</p><p className="font-bold text-gray-500">No fee record assigned yet.</p><p className="text-sm text-gray-400 mt-1">Contact admin to set up your fee record.</p></div>
+                fees.map((ledger) => {
+                  const courseTitle = ledger.course?.title || "Enrolled Course";
+                  return (
+                    <div key={ledger._id} className="bg-white rounded-3xl border border-gray-100 shadow-md p-6 space-y-6">
+                      {/* Course Info Banner */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-blue-50 text-[#1A3B70] rounded-2xl flex items-center justify-center text-2xl font-black">
+                            📚
+                          </div>
+                          <div>
+                            <h2 className="font-black text-[#1A3B70] text-xl">{courseTitle}</h2>
+                            <p className="text-xs text-gray-500 font-semibold mt-0.5">Account No: #{ledger._id?.slice(-8).toUpperCase()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Status:</span>
+                          <span
+                            className={`text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-wider border ${
+                              statusCls[ledger.status] ||
+                              "bg-slate-50 text-slate-655 border-slate-200"
+                            }`}
+                          >
+                            {ledger.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Numeric Breakdowns */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {[
+                          { label: "Total Billed Fee", val: `₹${(ledger.totalFees || 0).toLocaleString("en-IN")}`, style: "text-gray-600 font-bold" },
+                          { label: "Scholarship / Disc.", val: `- ₹${(ledger.discount || 0).toLocaleString("en-IN")}`, style: "text-gray-500 font-semibold" },
+                          { label: "Net Payable Fee", val: `₹${(ledger.netFee || 0).toLocaleString("en-IN")}`, style: "text-[#1A3B70] font-black text-sm" },
+                          { label: "Amount Paid", val: `₹${(ledger.paidAmount || 0).toLocaleString("en-IN")}`, style: "text-green-600 font-bold" },
+                          { label: "Remaining Balance", val: `₹${(ledger.remainingAmount || 0).toLocaleString("en-IN")}`, style: "text-red-500 font-black" },
+                        ].map((item, idx) => (
+                          <div key={idx} className="bg-blue-50/40 rounded-xl p-3 text-center border border-blue-50/20">
+                            <p className={`text-base font-extrabold ${item.style}`}>{item.val}</p>
+                            <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-wide">{item.label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Month-wise Fee History Table */}
+                      <div>
+                        <h3 className="font-black text-[#1A3B70] text-sm mb-3">📅 Month-wise Fee History</h3>
+                        {!ledger.monthlyBills || ledger.monthlyBills.length === 0 ? (
+                          <p className="text-gray-400 text-xs text-center py-4 bg-gray-50 rounded-xl">No fee records generated.</p>
+                        ) : (
+                          <div className="overflow-x-auto rounded-xl border border-gray-100">
+                            <table className="w-full text-xs text-left">
+                              <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                  {["Month", "Fee", "Paid", "Due", "Status", "Actions"].map((th) => (
+                                    <th key={th} className="py-2.5 px-3 font-black text-gray-500 uppercase tracking-wide">
+                                      {th}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50">
+                                {ledger.monthlyBills.map((s) => {
+                                  const monthPayment = ledger.payments?.find(
+                                    (p) => p.statement?._id === s._id || p.statement === s._id || (p.remarks && p.remarks.includes(s.month))
+                                  ) || ledger.payments?.[0];
+                                  return (
+                                    <tr key={s._id || s.month} className="hover:bg-gray-50/50 transition-colors">
+                                      <td className="py-2.5 px-3 font-bold text-gray-800">{s.month}</td>
+                                      <td className="py-2.5 px-3 text-gray-805 font-bold">₹{s.dueAmount.toLocaleString("en-IN")}</td>
+                                      <td className="py-2.5 px-3 text-green-600 font-bold">₹{s.paidAmount.toLocaleString("en-IN")}</td>
+                                      <td className="py-2.5 px-3 text-red-500 font-bold">₹{s.pendingAmount.toLocaleString("en-IN")}</td>
+                                      <td className="py-2.5 px-3">
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                                          statusCls[s.status] ||
+                                          "bg-slate-50 text-slate-655 border-slate-200"
+                                        }`}>
+                                          {s.status}
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 px-3">
+                                        <div className="flex items-center gap-2">
+                                          {s.pendingAmount > 0 ? (
+                                            <button
+                                              onClick={() => handlePayOnline(ledger, s)}
+                                              className="px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+                                            >
+                                              Pay Online
+                                            </button>
+                                          ) : (
+                                            monthPayment && (
+                                              <button
+                                                onClick={() => {
+                                                  setPrintingReceipt({ ledger, payment: monthPayment });
+                                                  setTimeout(() => {
+                                                    window.print();
+                                                  }, 500);
+                                                }}
+                                                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+                                              >
+                                                Download Receipt
+                                              </button>
+                                            )
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Payments & Receipts Listing */}
+                      <div>
+                        <h3 className="font-black text-[#1A3B70] text-sm mb-3">💳 Payment History</h3>
+                        {!ledger.payments || ledger.payments.length === 0 ? (
+                          <p className="text-gray-400 text-xs text-center py-4 bg-gray-50 rounded-xl">No payments recorded yet.</p>
+                        ) : (
+                          <div className="overflow-x-auto rounded-xl border border-gray-100">
+                            <table className="w-full text-xs text-left">
+                              <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                  {["Date & Time", "Month", "Amount", "Mode", "Reference", "Collected By", "Receipt"].map((th) => (
+                                    <th key={th} className="py-2.5 px-3 font-black text-gray-500 uppercase tracking-wide">
+                                      {th}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50">
+                                {ledger.payments.map((p) => (
+                                  <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="py-2.5 px-3 font-semibold text-gray-600">
+                                      {formatDateTime(p.date)}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-bold text-blue-600">
+                                      {p.statement?.month || (p.remarks && p.remarks.match(/[A-Za-z]+ \d{4}/)?.[0]) || "—"}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-black text-green-600">
+                                      ₹{(p.amount || 0).toLocaleString("en-IN")}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-gray-500 font-semibold">{p.mode}</td>
+                                    <td className="py-2.5 px-3 text-gray-400 font-medium max-w-xs truncate" title={p.remarks}>
+                                      {p.reference || p.remarks || "—"}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-gray-550 font-medium">
+                                      {p.collectedBy || "Online"}
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <button
+                                        onClick={() => {
+                                          setPrintingReceipt({ ledger, payment: p });
+                                          setTimeout(() => {
+                                            window.print();
+                                          }, 500);
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-all cursor-pointer shadow-sm"
+                                      >
+                                        Download
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                      {ledger.notes && (
+                        <div className="bg-gray-50 rounded-xl p-3.5 text-xs text-gray-600 border border-gray-100">
+                          <strong>Official Remarks:</strong> {ledger.notes}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
+              
+              {/* Contact Admin support notice */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <p className="text-xs text-gray-500 font-semibold">
+                  📞 For fee related questions or installment support, please call:{" "}
+                  <strong className="text-[#1A3B70]">+91 82713 65450</strong> or email <strong className="text-[#1A3B70]">commercegiyan@gmail.com</strong>.
+                </p>
+              </div>
             </div>
           )}
 
@@ -405,15 +830,45 @@ export default function StudentDashboard() {
           {tab === "profile" && (
             <div className="space-y-4 max-w-lg">
               <div className={card}>
-                <h3 className="font-black text-[#1A3B70] mb-4">✏️ Edit Profile</h3>
+                <h3 className="font-black text-[#1A3B70] mb-4">🎓 Academic Profile Details</h3>
+                <div className="space-y-3 bg-[#F4F9FF] rounded-2xl p-5 mb-4 border border-gray-100 text-sm">
+                  <div>
+                    <span className="text-xs font-bold text-gray-400 uppercase block">Registration Number</span>
+                    <strong className="font-black text-[#1A3B70] text-base mt-0.5">{user?.registrationNumber || "Not assigned"}</strong>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 uppercase block">Class</span>
+                      <strong className="font-black text-[#1A3B70] mt-0.5 block">{user?.className || "—"}</strong>
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 uppercase block">Stream</span>
+                      <strong className="font-black text-[#1A3B70] mt-0.5 block">{user?.stream || "—"}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="font-black text-[#1A3B70] mb-4">✏️ Edit Personal Details</h3>
                 <div className="space-y-3">
                   {[["Name", "name", "text"], ["Phone", "phone", "text"], ["Address", "address", "text"]].map(([l, k, t]) => (
                     <div key={k}>
                       <label className="text-xs font-bold text-gray-500 uppercase block mb-1">{l}</label>
-                      <input type={t} value={profileForm[k]} onChange={e => setProfileForm({ ...profileForm, [k]: e.target.value })} className={inp} />
+                      <input type={t} value={profileForm[k] || ""} onChange={e => setProfileForm({ ...profileForm, [k]: e.target.value })} className={inp} />
                     </div>
                   ))}
-                  <button onClick={handleProfileSave} className="bg-[#1A3B70] text-white font-bold px-6 py-2.5 rounded-xl text-sm hover:bg-[#122A50] transition-colors">Save Changes</button>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Parent Name</label>
+                      <input type="text" value={profileForm.parentName || ""} readOnly className={`${inp} bg-slate-100 cursor-not-allowed`} title="Contact Admin to update Parent details" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Parent Phone</label>
+                      <input type="text" value={profileForm.parentPhone || ""} readOnly className={`${inp} bg-slate-100 cursor-not-allowed`} title="Contact Admin to update Parent details" />
+                    </div>
+                  </div>
+
+                  <button onClick={handleProfileSave} className="bg-[#1A3B70] text-white font-bold px-6 py-2.5 rounded-xl text-sm hover:bg-[#122A50] transition-colors mt-2">Save Changes</button>
                 </div>
               </div>
               <div className={card}>
@@ -433,6 +888,14 @@ export default function StudentDashboard() {
 
         </main>
       </div>
+
+      {printingReceipt && (
+        <ReceiptGenerator
+          ledger={printingReceipt.ledger}
+          payment={printingReceipt.payment}
+          onClose={() => setPrintingReceipt(null)}
+        />
+      )}
     </div>
   );
 }

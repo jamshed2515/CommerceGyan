@@ -109,8 +109,11 @@ router.post("/:id/students", authMiddleware, adminMiddleware, async (req, res) =
     }
     batch.students.push(studentId);
     await batch.save();
-    // Also update student's batch field
-    await User.findByIdAndUpdate(studentId, { batch: req.params.id });
+    // Update student's legacy batch field and addToSet assignedBatches
+    await User.findByIdAndUpdate(studentId, {
+      batch: req.params.id,
+      $addToSet: { assignedBatches: req.params.id }
+    });
     res.json({ message: "Student assigned to batch", batch });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -123,7 +126,19 @@ router.delete("/:id/students/:studentId", authMiddleware, adminMiddleware, async
     await Batch.findByIdAndUpdate(req.params.id, {
       $pull: { students: req.params.studentId },
     });
-    await User.findByIdAndUpdate(req.params.studentId, { batch: null });
+    // Pull from assignedBatches
+    const student = await User.findByIdAndUpdate(
+      req.params.studentId,
+      { $pull: { assignedBatches: req.params.id } },
+      { new: true }
+    );
+    if (student) {
+      // If the removed batch was the legacy 'batch', update it to the first remaining assigned batch (or null)
+      if (student.batch && student.batch.toString() === req.params.id) {
+        student.batch = student.assignedBatches.length > 0 ? student.assignedBatches[0] : null;
+        await student.save();
+      }
+    }
     res.json({ message: "Student removed from batch" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });

@@ -36,10 +36,23 @@ app.get("/", (req, res) => res.send("Commerce Gyan API is running ✅"));
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/katras_db";
 
+const { migrateRegistrationNumbers, migrateFeesToLedgers } = require("./utils/migrations");
+
 mongoose
   .connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("Connected to MongoDB successfully!");
+    try {
+      await migrateRegistrationNumbers();
+    } catch (migErr) {
+      console.error("Failed to run registration numbers migration:", migErr);
+    }
+    try {
+      await migrateFeesToLedgers();
+    } catch (migErr) {
+      console.error("Failed to run fee ledger migration:", migErr);
+    }
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => console.error("Database connection error:", err));
+

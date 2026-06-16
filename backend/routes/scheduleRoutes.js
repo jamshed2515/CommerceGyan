@@ -11,11 +11,17 @@ const populateOpts = [
   { path: "teacher", select: "name subject email phone" },
 ];
 
-// GET all schedules (auth required) — supports ?batch=&teacher= filters
+// GET all schedules (auth required) — supports ?batch=&teacher= filters (batch can be comma-separated)
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const filter = {};
-    if (req.query.batch) filter.batch = req.query.batch;
+    if (req.query.batch) {
+      if (req.query.batch.includes(",")) {
+        filter.batch = { $in: req.query.batch.split(",") };
+      } else {
+        filter.batch = req.query.batch;
+      }
+    }
     if (req.query.teacher) filter.teacher = req.query.teacher;
     const schedules = await Schedule.find(filter).populate(populateOpts).sort({ dayOfWeek: 1, startTime: 1 });
     res.json(schedules);
@@ -30,7 +36,13 @@ router.get("/today", authMiddleware, async (req, res) => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const today = days[new Date().getDay()];
     const filter = { dayOfWeek: today };
-    if (req.query.batch) filter.batch = req.query.batch;
+    if (req.query.batch) {
+      if (req.query.batch.includes(",")) {
+        filter.batch = { $in: req.query.batch.split(",") };
+      } else {
+        filter.batch = req.query.batch;
+      }
+    }
     if (req.query.teacher) filter.teacher = req.query.teacher;
     const schedules = await Schedule.find(filter).populate(populateOpts).sort({ startTime: 1 });
     res.json(schedules);

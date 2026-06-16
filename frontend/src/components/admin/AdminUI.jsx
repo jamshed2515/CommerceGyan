@@ -165,36 +165,40 @@ export function ConfirmModal({ message, onConfirm, onCancel, confirmLabel = "Del
   );
 }
 
-export function FormModal({ title, children, onClose, onSubmit, submitLabel = "Save", loading = false, disabled = false }) {
+export function FormModal({ title, children, onClose, onSubmit, submitLabel = "Save", loading = false, disabled = false, footer = null, hideHeader = false }) {
   return (
     <AnimatePresence>
       <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
         <motion.div
-          initial={{ y: 20, opacity: 0, scale: 0.98 }}
+          initial={{ y: 15, opacity: 0, scale: 0.99 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 20, opacity: 0, scale: 0.98 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.4)] w-full max-w-lg my-4 border border-slate-100 dark:border-slate-850 overflow-hidden"
+          exit={{ y: 15, opacity: 0, scale: 0.99 }}
+          className="bg-white dark:bg-slate-900 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.04)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] w-full max-w-lg my-4 border border-slate-200/50 dark:border-slate-800/80 overflow-hidden"
         >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
-            <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm">{title}</h3>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-655 text-lg leading-none w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-          <div className="p-5">{children}</div>
-          <div className="flex gap-2 px-5 pb-5">
-            <button onClick={onClose} className={`flex-1 ${btnGhost}`}>
-              Cancel
-            </button>
-            <button onClick={onSubmit} disabled={loading || disabled} className={`flex-1 ${btnPrimary} flex items-center justify-center gap-2`}>
-              {loading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-              {submitLabel}
-            </button>
-          </div>
+          {!hideHeader && (
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-wide">{title}</h3>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-lg leading-none w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+          )}
+          <div className="p-6">{children}</div>
+          {footer ? footer : (
+            <div className="flex gap-3 px-6 pb-6">
+              <button onClick={onClose} className={`flex-1 h-10 ${btnGhost}`}>
+                Cancel
+              </button>
+              <button onClick={onSubmit} disabled={loading || disabled} className={`flex-1 h-10 ${btnPrimary} flex items-center justify-center gap-2`}>
+                {loading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {submitLabel}
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     </AnimatePresence>
@@ -257,7 +261,7 @@ export function PageHeader({ title, subtitle, action }) {
 }
 
 // Custom dropdown for premium action menus (e.g. edit/delete)
-export function Dropdown({ trigger, children }) {
+export function Dropdown({ trigger, children, className = "", menuClassName = "" }) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
 
@@ -269,8 +273,27 @@ export function Dropdown({ trigger, children }) {
     return () => document.removeEventListener("mousedown", listener);
   }, []);
 
+  // Avoid duplicate styles if custom positioning or width are supplied
+  const hasWidth = menuClassName.includes("w-");
+  const hasRight = menuClassName.includes("right-") || menuClassName.includes("left-");
+  const hasZ = menuClassName.includes("z-");
+  const hasMt = menuClassName.includes("mt-");
+
+  const defaultClasses = [
+    "absolute",
+    hasRight ? "" : "right-0",
+    hasMt ? "" : "mt-1",
+    hasWidth ? "" : "w-48",
+    "rounded-xl",
+    "bg-white dark:bg-slate-800",
+    "border border-slate-100 dark:border-slate-700/60",
+    "shadow-xl dark:shadow-slate-950/40",
+    "py-1.5",
+    hasZ ? "" : "z-[45]"
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className="relative inline-block text-left" ref={ref}>
+    <div className={`relative inline-block text-left ${className}`} ref={ref}>
       <div onClick={() => setOpen(!open)} className="cursor-pointer">{trigger}</div>
       <AnimatePresence>
         {open && (
@@ -279,7 +302,7 @@ export function Dropdown({ trigger, children }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 5 }}
             transition={{ duration: 0.12 }}
-            className="absolute right-0 mt-1 w-36 rounded-xl bg-white border border-slate-100 shadow-xl py-1.5 z-[45]"
+            className={`${defaultClasses} ${menuClassName}`}
             onClick={() => setOpen(false)}
           >
             {children}
@@ -297,7 +320,7 @@ export function DropdownItem({ children, onClick, className = "" }) {
         e.stopPropagation();
         onClick?.();
       }}
-      className={`w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors flex items-center gap-2 cursor-pointer ${className}`}
+      className={`w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-850 dark:hover:text-white transition-all flex items-center gap-3 whitespace-nowrap cursor-pointer ${className}`}
     >
       {children}
     </button>

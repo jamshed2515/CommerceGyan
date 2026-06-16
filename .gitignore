@@ -29,3 +29,9 @@ backend/uploads/
 
 # Misc
 *.pem
+
+# Local temp folders
+brain/
+backend/scratch/
+scratch_request.txt
+backend/test_my_api.js

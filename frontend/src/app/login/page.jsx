@@ -298,11 +298,13 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                {role === "student" ? "Email / Reg No / Mobile" : "Email Address"}
+              </label>
               <input 
-                type="email" 
+                type="text" 
                 required 
-                placeholder="you@example.com" 
+                placeholder={role === "student" ? "you@example.com or CGA260001" : "you@example.com"} 
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 className={inputClass}

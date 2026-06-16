@@ -66,13 +66,11 @@ export default function Signup() {
         return; 
       }
 
-      showToast("Account created successfully! Redirecting...", "success");
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      showToast("Admission application submitted successfully! Redirecting to login...", "success");
       
       setTimeout(() => {
-        router.push("/dashboard");
-      }, 800);
+        router.push("/login");
+      }, 3000);
     } catch { 
       showToast("Server error. Please try again.", "error");
       setError("Server error. Please try again."); 

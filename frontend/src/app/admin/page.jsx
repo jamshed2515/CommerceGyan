@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { validateSession, clearSession } from "@/lib/auth";
+import { validateSession, clearSession, getStoredToken } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
@@ -33,16 +33,22 @@ import {
   AlertTriangle,
   Clock,
   Sparkles,
+  Eye,
+  Phone,
+  MapPin,
+  X,
+  LayoutGrid,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import TeachersTab from "@/components/admin/TeachersTab";
 import BatchesTab from "@/components/admin/BatchesTab";
 import SchedulesTab from "@/components/admin/SchedulesTab";
-import FeeTab from "@/components/admin/FeeTab";
+import FeeTab from "@/components/admin/finance/page";
 import CoursesTab from "@/components/admin/CoursesTab";
 import AchieversTab from "@/components/admin/AchieversTab";
 import PaymentsTab from "@/components/admin/PaymentsTab";
+import LeadsTab from "@/components/admin/LeadsTab";
 import GlobalSearch from "@/components/admin/GlobalSearch";
 import {
   Toast,
@@ -55,6 +61,7 @@ import {
   Dropdown,
   DropdownItem,
   btnPrimary,
+  btnSecondary,
   btnGhost,
   Field,
   FormModal,
@@ -72,6 +79,7 @@ const SECTIONS = [
   {
     title: "Academics",
     items: [
+      { id: "leads", label: "Admissions / Leads", icon: Users },
       { id: "students", label: "Students", icon: Users },
       { id: "teachers", label: "Teachers", icon: GraduationCap },
       { id: "courses", label: "Courses", icon: BookOpen },
@@ -138,7 +146,15 @@ function AdminDashboardInner() {
   const [notes, setNotes] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [stats, setStats] = useState({});
+  const [viewingStudent, setViewingStudent] = useState(null);
+  const [editStudentForm, setEditStudentForm] = useState(null);
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [showBatchAssignModal, setShowBatchAssignModal] = useState(false);
+  const [assignedBatchesForm, setAssignedBatchesForm] = useState([]);
+  const [studentNotes, setStudentNotes] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(!_dashboardCache);
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
   // ── Sidebar collapse: single source of truth, persisted in localStorage ──
@@ -167,7 +183,7 @@ function AdminDashboardInner() {
   const [noteFile, setNoteFile] = useState(null);
   const fileRef = useRef();
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token = getStoredToken();
   const H = { Authorization: `Bearer ${token}` };
   const JH = { ...H, "Content-Type": "application/json" };
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
@@ -185,6 +201,7 @@ function AdminDashboardInner() {
     setEnquiries(Array.isArray(d.enquiries) ? d.enquiries : []);
     setAchievers(Array.isArray(d.achievers) ? d.achievers : []);
     setPayments(Array.isArray(d.payments) ? d.payments : []);
+    setLeads(Array.isArray(d.leads) ? d.leads : []);
     setStats(d.stats && typeof d.stats === 'object' ? d.stats : {});
   };
 
@@ -265,6 +282,47 @@ function AdminDashboardInner() {
     flash("✅ Student deleted"); setConfirm(null); fetchAll(true);
   }});
 
+  const handleSaveStudent = async (studentId, updatedFields) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API}/api/admin/students/${studentId}`, {
+        method: "PUT",
+        headers: JH,
+        body: JSON.stringify(updatedFields),
+      });
+      if (res.ok) {
+        flash("✅ Student profile updated!");
+        fetchAll(true);
+        const data = await res.json();
+        setViewingStudent(data.student);
+      } else {
+        const d = await res.json();
+        flash(`❌ ${d.message || "Failed to update"}`);
+      }
+    } catch {
+      flash("❌ Connection error");
+    }
+    setActionLoading(false);
+  };
+
+  const handleSaveNotes = async (studentId, notesText) => {
+    try {
+      const res = await fetch(`${API}/api/admin/students/${studentId}/notes`, {
+        method: "PUT",
+        headers: JH,
+        body: JSON.stringify({ internalNotes: notesText }),
+      });
+      if (res.ok) {
+        flash("✅ Remarks updated!");
+        fetchAll(true);
+      } else {
+        flash("❌ Failed to save remarks");
+      }
+    } catch {
+      flash("❌ Connection error");
+    }
+  };
+
   // Get current breadcrumb active item
   const activeBreadcrumb = useMemo(() => {
     for (const group of SECTIONS) {
@@ -276,6 +334,7 @@ function AdminDashboardInner() {
 
   // Sidebar count map
   const sidebarCountMap = {
+    leads: leads.filter(l => l.status === "Pending").length,
     students: students.length,
     teachers: teachers.length,
     courses: courses.length,
@@ -292,18 +351,58 @@ function AdminDashboardInner() {
   const workloadChart = useMemo(() => {
     const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const counts = daysOrder.map(day => schedules.filter(s => s.dayOfWeek === day).length);
-    const maxVal = Math.max(...counts, 1);
-    return { counts, maxVal, daysOrder };
+    const maxVal = Math.max(...counts, 0);
+    // All days that share the peak allocation (could be more than one)
+    const peakDays = maxVal > 0 ? daysOrder.filter((_, i) => counts[i] === maxVal) : [];
+    return { counts, maxVal, daysOrder, peakDays };
   }, [schedules]);
 
-  // SVG dynamic monthly revenue line area
+  // SVG dynamic monthly revenue line area — driven by real fee payment data
   const revenueChartPoints = useMemo(() => {
-    // Generate smooth area path from payments
-    const defaultPoints = [20, 40, 25, 60, 45, 80, 65, 95];
-    const pointsStr = defaultPoints.map((p, idx) => `${(idx * 70) + 20},${220 - (p * 1.8)}`).join(" L ");
-    const areaStr = `${pointsStr} L 510,220 L 20,220 Z`;
-    return { pointsStr, areaStr, defaultPoints };
-  }, []);
+    // Build last 8 months labels and aggregate paid amounts
+    const now = new Date();
+    const months = Array.from({ length: 8 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (7 - i), 1);
+      return { year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleString("en-IN", { month: "short" }) };
+    });
+
+    const totals = months.map(({ year, month }) => {
+      return (fees || []).reduce((sum, f) => {
+        if (!f || !f.payments) return sum;
+        const paymentSumForMonth = f.payments.reduce((pSum, p) => {
+          if (!p || !p.date) return pSum;
+          const d = new Date(p.date);
+          if (d.getFullYear() === year && d.getMonth() === month) {
+            return pSum + (p.amount || 0);
+          }
+          return pSum;
+        }, 0);
+        return sum + paymentSumForMonth;
+      }, 0);
+    });
+
+    const paymentCount = (fees || []).reduce((acc, f) => acc + (f.payments || []).length, 0);
+    const ledgerCount = (fees || []).length;
+    const totalCollected = stats.totalFeeCollected || 0;
+
+    console.log("Analytics logging:", {
+      chartData: totals,
+      paymentCount,
+      ledgerCount,
+    });
+
+    // Show chart if there's any collection history or if ledger accounts exist
+    const hasData = totalCollected > 0 || ledgerCount > 0;
+    if (!hasData) return { hasData: false, monthLabels: months.map(m => m.label), totals };
+
+    const maxVal = Math.max(...totals, 1);
+    // Normalise to 0–100 scale for SVG (chart height 200, y range 20–220)
+    const normalized = totals.map(v => Math.round((v / maxVal) * 100));
+    const pointsStr = normalized.map((p, idx) => `${(idx * 70) + 20},${220 - (p * 1.8)}`).join(" L ");
+    const areaStr = `M ${pointsStr} L 510,220 L 20,220 Z`;
+    const lineStr = `M ${pointsStr}`;
+    return { hasData: true, normalized, pointsStr, areaStr, lineStr, monthLabels: months.map(m => m.label), totals, maxVal };
+  }, [fees, stats.totalFeeCollected]);
 
   // Filter students
   const filteredStudents = useMemo(() => {
@@ -354,6 +453,229 @@ function AdminDashboardInner() {
       }
       return next;
     });
+  };
+
+  const getEnrolledCourses = () => {
+    try {
+      const assigned = viewingStudent?.assignedBatches || [];
+      const legacy = viewingStudent?.batch ? [viewingStudent?.batch] : [];
+      const allBatches = [...assigned, ...legacy];
+      const titles = allBatches.map(b => {
+        if (!b) return null;
+        const batchId = b._id || b;
+        const fullBatch = (batches || []).find(x => x && (x._id === batchId || x.id === batchId));
+        return fullBatch?.course?.title;
+      }).filter(Boolean);
+      return Array.from(new Set(titles));
+    } catch (e) {
+      console.error("Error computing enrolled courses:", e);
+      return [];
+    }
+  };
+
+  const getPendingFees = () => {
+    try {
+      const studentId = viewingStudent?._id;
+      if (!studentId) return 0;
+      const studentFees = (fees || []).filter(
+        (f) => f && f.student && (f.student._id === studentId || f.student === studentId)
+      );
+      return studentFees.reduce((sum, f) => sum + (f.remainingAmount || 0), 0);
+    } catch (e) {
+      console.error("Error computing pending fees:", e);
+      return 0;
+    }
+  };
+
+  const fmtDate = (d) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const renderProfileModalContent = () => {
+    try {
+      if (!viewingStudent) return null;
+
+      const initials = ((viewingStudent?.name || "?")
+        .split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
+
+      return (
+        <div>
+          {/* ── HEADER ── */}
+          <div style={{ padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: 16, borderBottom: "0.5px solid #E2E5EA" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#E6F1FB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500, fontSize: 17, color: "#0C447C", flexShrink: 0, border: "0.5px solid #B5D4F4" }}>
+              {initials}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 17, fontWeight: 500, color: "#111827" }}>{viewingStudent?.name || "—"}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, padding: "3px 9px", borderRadius: 20, background: "#EAF3DE", color: "#27500A" }}>
+                  {viewingStudent?.admission?.status || "Active"}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, color: "#8A94A6", fontFamily: "monospace" }}>{viewingStudent?.registrationNumber || "—"}</span>
+                <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#D1D5DB", display: "inline-block" }} />
+                <span style={{ fontSize: 12, color: "#8A94A6" }}>Admitted {fmtDate(viewingStudent?.admission?.date || viewingStudent?.createdAt)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── STATS ROW ── */}
+          <div style={{ padding: "1.25rem 1.5rem", borderBottom: "0.5px solid #E2E5EA", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div style={{ background: "#F3F4F6", borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
+              <p style={{ fontSize: 18, fontWeight: 500, color: "#111827", margin: "0 0 2px" }}>{getEnrolledCourses().length}</p>
+              <p style={{ fontSize: 11, color: "#8A94A6", margin: 0 }}>Courses</p>
+            </div>
+            <div style={{ background: "#F3F4F6", borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
+              <p style={{ fontSize: 18, fontWeight: 500, color: "#111827", margin: "0 0 2px" }}>{(viewingStudent?.assignedBatches || []).length}</p>
+              <p style={{ fontSize: 11, color: "#8A94A6", margin: 0 }}>Batches</p>
+            </div>
+            <div style={{ background: "#FAECE7", borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
+              <p style={{ fontSize: 15, fontWeight: 500, color: "#993C1D", margin: "0 0 2px" }}>₹{getPendingFees().toLocaleString()}</p>
+              <p style={{ fontSize: 11, color: "#D85A30", margin: 0 }}>Pending fees</p>
+            </div>
+          </div>
+
+          {/* ── PERSONAL INFORMATION ── */}
+          {isEditingStudent && editStudentForm ? (
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "0.5px solid #E2E5EA" }}>
+              <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8A94A6", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                Personal information
+                <span style={{ flex: 1, height: "0.5px", background: "#E2E5EA" }} />
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <Field label="Full Name"><input value={editStudentForm.name || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, name: e.target.value })} className={inp} /></Field>
+                <Field label="Mobile Number"><input value={editStudentForm.phone || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, phone: e.target.value })} className={inp} /></Field>
+                <Field label="Email Address"><input type="email" value={editStudentForm.email || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, email: e.target.value })} className={inp} /></Field>
+                <Field label="Parent Name"><input value={editStudentForm.parentName || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, parentName: e.target.value })} className={inp} placeholder="Parent Name" /></Field>
+                <Field label="Parent Phone"><input value={editStudentForm.parentPhone || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, parentPhone: e.target.value })} className={inp} placeholder="Parent Phone" /></Field>
+                <Field label="Residential Address"><input value={editStudentForm.address || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, address: e.target.value })} className={inp} placeholder="Address" /></Field>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "0.5px solid #E2E5EA" }}>
+              <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8A94A6", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                <User style={{ width: 12, height: 12 }} />
+                Personal information
+                <span style={{ flex: 1, height: "0.5px", background: "#E2E5EA" }} />
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px", display: "flex", alignItems: "center", gap: 5 }}><Phone style={{ width: 13, height: 13 }} /> Mobile</p>
+                  <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 400 }}>{viewingStudent?.phone || "—"}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px", display: "flex", alignItems: "center", gap: 5 }}><Mail style={{ width: 13, height: 13 }} /> Email</p>
+                  <p style={{ fontSize: 13, color: "#185FA5", margin: 0, fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{viewingStudent?.email || "—"}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px", display: "flex", alignItems: "center", gap: 5 }}><User style={{ width: 13, height: 13 }} /> Parent</p>
+                  <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 400 }}>{viewingStudent?.parentName || "Not Provided"}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px", display: "flex", alignItems: "center", gap: 5 }}><Phone style={{ width: 13, height: 13 }} /> Parent phone</p>
+                  <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 400 }}>{viewingStudent?.parentPhone || "Not Provided"}</p>
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px", display: "flex", alignItems: "center", gap: 5 }}><MapPin style={{ width: 13, height: 13 }} /> Address</p>
+                  <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 400 }}>{viewingStudent?.address || "Not Provided"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── ACADEMIC INFORMATION ── */}
+          {isEditingStudent && editStudentForm ? (
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "0.5px solid #E2E5EA" }}>
+              <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8A94A6", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                Academic information
+                <span style={{ flex: 1, height: "0.5px", background: "#E2E5EA" }} />
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                <Field label="Class / Grade"><input value={editStudentForm.className || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, className: e.target.value })} className={inp} /></Field>
+                <Field label="Stream"><input value={editStudentForm.stream || ""} onChange={(e) => setEditStudentForm({ ...editStudentForm, stream: e.target.value })} className={inp} /></Field>
+              </div>
+              <p style={{ fontSize: 9, fontWeight: 700, color: "#8A94A6", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Assigned Batches (manage via Batches tab)</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(viewingStudent?.assignedBatches || []).length > 0 ? (
+                  (viewingStudent?.assignedBatches || []).map((b) => {
+                    if (!b) return null;
+                    const name = b.batchName || (typeof b === "string" ? ((batches || []).find(x => x && x._id === b)?.batchName) : null) || "Batch";
+                    const id = b._id || b;
+                    return <span key={id} style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 20, background: "#F3F4F6", color: "#4B5563", border: "0.5px solid #E2E5EA" }}>{name}</span>;
+                  }).filter(Boolean)
+                ) : (
+                  <span style={{ fontSize: 11, color: "#8A94A6" }}>No batches assigned yet</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "0.5px solid #E2E5EA" }}>
+              <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8A94A6", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                <BookOpen style={{ width: 12, height: 12 }} />
+                Academic information
+                <span style={{ flex: 1, height: "0.5px", background: "#E2E5EA" }} />
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+                <div>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px" }}>Class / grade</p>
+                  <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 400 }}>{viewingStudent?.className || "—"}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: "#8A94A6", margin: "0 0 3px" }}>Stream</p>
+                  <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 400 }}>{viewingStudent?.stream || "—"}</p>
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <p style={{ fontSize: 11, color: "#8A94A6", marginBottom: 7 }}>Enrolled courses</p>
+                <div>
+                  {(() => {
+                    const uniqueCourses = getEnrolledCourses();
+                    if (uniqueCourses.length > 0) {
+                      return uniqueCourses.map((c, i) => (
+                        <span key={i} style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 20, margin: "3px 3px 3px 0", background: "#EEEDFE", color: "#3C3489" }}>{c}</span>
+                      ));
+                    }
+                    return <span style={{ fontSize: 11, color: "#8A94A6" }}>No courses enrolled</span>;
+                  })()}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 11, color: "#8A94A6", marginBottom: 7 }}>Assigned batches</p>
+                <div>
+                  {(() => {
+                    const assigned = viewingStudent?.assignedBatches || [];
+                    if (assigned.length > 0) {
+                      return assigned.map((b) => {
+                        if (!b) return null;
+                        const name = b.batchName || (typeof b === "string" ? ((batches || []).find(x => x && x._id === b)?.batchName) : null) || "Batch";
+                        const id = b._id || b;
+                        return <span key={id} style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 20, margin: "3px 3px 3px 0", background: "#F3F4F6", color: "#4B5563", border: "0.5px solid #E2E5EA" }}>{name}</span>;
+                      }).filter(Boolean);
+                    }
+                    const legacyBatch = viewingStudent?.batch;
+                    if (legacyBatch) {
+                      const name = legacyBatch.batchName || (typeof legacyBatch === "string" ? ((batches || []).find(x => x && x._id === legacyBatch)?.batchName) : null) || "Legacy Batch";
+                      return <span style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 20, margin: "3px 3px 3px 0", background: "#F3F4F6", color: "#4B5563", border: "0.5px solid #E2E5EA" }}>{name}</span>;
+                    }
+                    return <span style={{ fontSize: 11, color: "#8A94A6" }}>No batches assigned yet</span>;
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    } catch (e) {
+      console.error("Error rendering student profile content safely:", e);
+      return (
+        <div className="p-6 text-center text-red-500 font-bold dark:text-red-400 space-y-2">
+          <p>⚠️ Failed to render student profile details.</p>
+          <p className="text-[10px] font-mono text-slate-400">Some expected record properties are invalid or missing.</p>
+        </div>
+      );
+    }
   };
 
   return (
@@ -440,7 +762,7 @@ function AdminDashboardInner() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top Sticky Navbar (Height: 64px) */}
         <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4.5 flex items-center justify-between sticky top-0 z-40 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div className="flex items-center gap-4">
@@ -507,7 +829,7 @@ function AdminDashboardInner() {
           </div>
         </header>
         {/* Dashboard Pages wrapper */}
-        <main className="flex-1 p-4 overflow-y-auto space-y-4">
+        <main className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-4 min-w-0">
 
           {/* 1. OVERVIEW DASHBOARD TAB */}
           {tab === "overview" && loading && !_dashboardCache && (
@@ -573,26 +895,35 @@ function AdminDashboardInner() {
                 
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
                   {[
-                    { id: "students", label: "Students", val: students.length, growth: "+12%", icon: Users, color: "blue" },
-                    { id: "teachers", label: "Faculty", val: teachers.length, growth: "+4%", icon: GraduationCap, color: "purple" },
-                    { id: "batches", label: "Batches", val: batches.length, growth: "0%", icon: Layers, color: "cyan" },
-                    { id: "courses", label: "Courses", val: courses.length, growth: "+8%", icon: BookOpen, color: "pink" },
-                    { id: "revenue", label: "Revenue", val: `₹${(stats.totalFeeCollected || 0).toLocaleString()}`, growth: "+18%", icon: DollarSign, color: "emerald" },
-                    { id: "dues", label: "Fee Due", val: `₹${(stats.totalFeeDue || 0).toLocaleString()}`, growth: "-5%", icon: CreditCard, color: "rose" },
+                    { id: "students", label: "Students", val: students.length, growth: null, icon: Users, color: "blue" },
+                    { id: "teachers", label: "Faculty", val: teachers.length, growth: null, icon: GraduationCap, color: "purple" },
+                    { id: "batches", label: "Batches", val: batches.length, growth: null, icon: Layers, color: "cyan" },
+                    { id: "courses", label: "Courses", val: courses.length, growth: null, icon: BookOpen, color: "pink" },
+                    { id: "revenue", label: "Revenue", val: `₹${(stats.totalFeeCollected || 0).toLocaleString()}`, growth: stats.totalFeeCollected > 0 ? "Collected" : null, icon: DollarSign, color: "emerald" },
+                    { id: "dues", label: "Fee Due", val: `₹${(stats.totalFeeDue || 0).toLocaleString()}`, growth: stats.totalFeeDue > 0 ? "Pending" : null, icon: CreditCard, color: "rose" },
                   ].map((item, idx) => {
                     const themes = {
                       blue: { bg: "bg-blue-50/25 dark:bg-blue-950/15", border: "border-blue-200/80 dark:border-blue-900/50", iconBg: "bg-blue-100/80 dark:bg-blue-900/60", iconText: "text-blue-600 dark:text-blue-400", spark: "M5,20 Q15,8 25,18 T45,4", stroke: "#3B82F6" },
                       purple: { bg: "bg-purple-50/25 dark:bg-purple-950/15", border: "border-purple-200/80 dark:border-purple-900/50", iconBg: "bg-purple-100/80 dark:bg-purple-900/60", iconText: "text-purple-650 dark:text-purple-450", spark: "M5,15 Q15,18 25,10 T45,8", stroke: "#8B5CF6" },
-                      cyan: { bg: "bg-cyan-50/25 dark:bg-cyan-950/15", border: "border-cyan-200/80 dark:border-cyan-900/50", iconBg: "bg-cyan-100/80 dark:bg-cyan-900/60", iconText: "text-cyan-600 dark:text-cyan-400", spark: "M5,15 L45,15", stroke: "#06B6D4" },
+                      cyan: { bg: "bg-cyan-50/25 dark:bg-cyan-950/15", border: "border-cyan-200/80 dark:border-cyan-900/50", iconBg: "bg-cyan-100/80 dark:bg-cyan-900/60", iconText: "text-cyan-600 dark:text-cyan-400", spark: batches.length > 0 ? "M5,18 Q15,12 25,14 T45,8" : "M5,18 L45,18", stroke: "#06B6D4" },
                       pink: { bg: "bg-pink-50/25 dark:bg-pink-950/15", border: "border-pink-200/80 dark:border-pink-900/50", iconBg: "bg-pink-100/80 dark:bg-pink-900/60", iconText: "text-pink-650 dark:text-pink-400", spark: "M5,18 Q15,5 25,12 T45,5", stroke: "#EC4899" },
-                      emerald: { bg: "bg-emerald-50/25 dark:bg-emerald-950/15", border: "border-emerald-200/80 dark:border-emerald-900/50", iconBg: "bg-emerald-100/80 dark:bg-emerald-900/60", iconText: "text-emerald-600 dark:text-emerald-450", spark: "M5,22 Q15,15 25,8 T45,2", stroke: "#10B981" },
-                      rose: { bg: "bg-rose-50/25 dark:bg-rose-950/15", border: "border-rose-200/80 dark:border-rose-900/50", iconBg: "bg-rose-100/80 dark:bg-rose-900/60", iconText: "text-rose-650 dark:text-rose-455", spark: "M5,5 Q15,12 25,18 T45,22", stroke: "#F43F5E" },
+                      emerald: { bg: "bg-emerald-50/25 dark:bg-emerald-950/15", border: "border-emerald-200/80 dark:border-emerald-900/50", iconBg: "bg-emerald-100/80 dark:bg-emerald-900/60", iconText: "text-emerald-600 dark:text-emerald-450", spark: stats.totalFeeCollected > 0 ? "M5,22 Q15,15 25,8 T45,2" : "M5,18 L45,18", stroke: "#10B981" },
+                      rose: { bg: "bg-rose-50/25 dark:bg-rose-950/15", border: "border-rose-200/80 dark:border-rose-900/50", iconBg: "bg-rose-100/80 dark:bg-rose-900/60", iconText: "text-rose-650 dark:text-rose-455", spark: stats.totalFeeDue > 0 ? "M5,5 Q15,12 25,18 T45,22" : "M5,18 L45,18", stroke: "#F43F5E" },
                     }[item.color];
 
                     const Icon = item.icon;
+
+                    // Badge styling: null → Stable (neutral), "Pending" → rose, "Collected" → emerald
+                    const badgeClass = item.growth === null
+                      ? "bg-slate-100 border-slate-200/60 text-slate-500 dark:bg-slate-800/60 dark:border-slate-700/60 dark:text-slate-400"
+                      : item.growth === "Pending"
+                      ? "bg-rose-500/10 border-rose-500/15 text-rose-600 dark:text-rose-400"
+                      : "bg-emerald-500/10 border-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+                    const badgeLabel = item.growth ?? "Stable";
+
                     return (
-                      <div 
-                        key={item.id} 
+                      <div
+                        key={item.id}
                         className={`bg-white dark:bg-slate-900 ${themes.border} border rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.035),0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-[0_16px_36px_-4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.02)] dark:hover:shadow-[0_16px_36px_-4px_rgba(0,0,0,0.45)] hover:-translate-y-1.5 hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300 flex flex-col justify-between h-[126px] group cursor-pointer`}
                       >
                         <div className="flex justify-between items-center mb-1">
@@ -609,20 +940,16 @@ function AdminDashboardInner() {
                             </svg>
                           </div>
                         </div>
-                        
+
                         <div className="my-0.5">
                           <p className="text-3xl md:text-[32px] font-black text-slate-900 dark:text-white tracking-tight leading-none">{item.val}</p>
                         </div>
 
                         <div className="flex justify-between items-center border-t border-slate-200/20 dark:border-slate-800/30 pt-2 text-[9px] font-bold uppercase tracking-wider">
-                          <span className="text-slate-400 dark:text-slate-500">MoM Growth</span>
-                          <span className={`px-2 py-0.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider ${
-                            item.growth.startsWith("-") 
-                              ? "bg-rose-500/10 border-rose-500/15 text-rose-600 dark:text-rose-400" 
-                              : item.growth === "0%" 
-                              ? "bg-slate-550/10 border-slate-500/15 text-slate-500 dark:text-slate-400" 
-                              : "bg-emerald-500/10 border-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                          }`}>{item.growth}</span>
+                          <span className="text-slate-400 dark:text-slate-500">{item.growth !== null ? "Status" : "Trend"}</span>
+                          <span className={`px-2 py-0.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider ${badgeClass}`}>
+                            {badgeLabel}
+                          </span>
                         </div>
                       </div>
                     );
@@ -640,272 +967,524 @@ function AdminDashboardInner() {
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-4">
-                  {/* SVG Revenue Line Graph (Visually Dominant Centerpiece) */}
+                  {/* SVG Revenue Line Graph — data-driven, no mock data */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 p-6 flex flex-col gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 transition-all duration-300 lg:col-span-3">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                       <div>
                         <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm tracking-tight">Revenue Collections Tracker</h3>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5">Clearing transactions value monthly timeline</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5">Monthly fee collection timeline — last 8 months</p>
                       </div>
-                      
-                      <div className="flex items-center gap-3 self-end sm:self-auto">
-                        <div className="flex bg-slate-100/80 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
-                          {["30D", "6M", "YTD"].map((tf) => (
-                            <button 
-                              key={tf} 
-                              className={`px-2.5 py-1 text-[9px] font-black rounded-md transition-colors cursor-pointer ${
-                                tf === "6M" 
-                                  ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm" 
-                                  : "text-slate-550 hover:text-slate-800 dark:hover:text-slate-205"
-                              }`}
-                            >
-                              {tf}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wider">
+                      {revenueChartPoints.hasData && (
+                        <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wider shrink-0">
                           <span>Total: ₹{(stats.totalFeeCollected || 0).toLocaleString()}</span>
-                          <span className="text-[8px] bg-emerald-500/20 px-1 rounded-sm">+14.2%</span>
                         </div>
-                      </div>
+                      )}
                     </div>
-                    
-                    {/* Framed Chart & Insights Grid */}
-                    <div className="grid lg:grid-cols-4 gap-6">
-                      {/* Left: Chart Area */}
-                      <div className="lg:col-span-3 bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100/80 dark:border-slate-850/60 rounded-xl p-4 md:p-6 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-                        <div className="relative h-64 w-full">
-                          <svg viewBox="0 0 540 240" className="w-full h-full text-blue-500 overflow-visible" preserveAspectRatio="none">
-                            {/* Gradient fill */}
-                            <defs>
-                              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.2" />
-                                <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
-                              </linearGradient>
-                            </defs>
-                            
-                            {/* Grid lines */}
-                            <line x1="20" y1="30" x2="510" y2="30" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
-                            <line x1="20" y1="90" x2="510" y2="90" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
-                            <line x1="20" y1="150" x2="510" y2="150" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
-                            <line x1="20" y1="210" x2="510" y2="210" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
-                            
-                            {/* Area graph */}
-                            <path d={revenueChartPoints.areaStr} fill="url(#chartGrad)" />
-                            {/* Line graph */}
-                            <path d={`M ${revenueChartPoints.pointsStr}`} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                            
-                            {/* Vertex Nodes for Premium interactivity */}
-                            {revenueChartPoints.defaultPoints.map((p, idx) => {
-                              const cx = (idx * 70) + 20;
-                              const cy = 220 - (p * 1.8);
-                              return (
-                                <g key={idx} className="group/node">
-                                  <circle cx={cx} cy={cy} r="4.5" className="fill-white stroke-blue-600 dark:stroke-blue-500 stroke-2.5 transition-all group-hover/node:r-6 shadow-sm" />
-                                  <circle cx={cx} cy={cy} r="12" className="fill-transparent hover:fill-blue-500/10 cursor-pointer transition-all" />
-                                </g>
-                              );
-                            })}
-                          </svg>
-                        </div>
-                        
-                        {/* Month indices */}
-                        <div className="flex justify-between px-4 text-[9px] font-black text-slate-400 dark:text-slate-500 mt-4 uppercase tracking-wider">
-                          {["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"].map(m => <span key={m}>{m}</span>)}
-                        </div>
-                      </div>
 
-                      {/* Right: Summary panel */}
-                      <div className="flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 pt-6 lg:pt-0 lg:pl-6 space-y-6">
-                        <div className="space-y-4">
-                          <div>
-                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Collection Efficiency</span>
-                            <div className="flex items-baseline gap-2 mt-1">
-                              <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
-                                {stats.totalFeeCollected && (stats.totalFeeCollected + (stats.totalFeeDue || 0)) > 0 
-                                  ? (stats.totalFeeCollected / (stats.totalFeeCollected + (stats.totalFeeDue || 0)) * 100).toFixed(0) 
-                                  : 0}%
+                    {!revenueChartPoints.hasData ? (
+                      /* Empty state — no actual fee payment records */
+                      <div className="flex flex-col items-center justify-center py-14 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl mb-4">📊</div>
+                        <p className="text-sm font-black text-slate-700 dark:text-slate-300">No revenue data available yet.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1.5 max-w-xs leading-relaxed">Fee collection records will appear here once payments are logged in the system.</p>
+                        <button onClick={() => setTab("fees")} className="mt-4 text-[11px] font-black text-blue-600 bg-blue-50 dark:bg-blue-950/20 border border-blue-100/40 px-3.5 py-1.5 rounded-xl hover:bg-blue-100/70 transition-colors cursor-pointer">Go to Fee Tracking →</button>
+                      </div>
+                    ) : (
+                      /* Real chart + insights */
+                      <div className="grid lg:grid-cols-4 gap-6">
+                        {/* Left: Chart Area */}
+                        <div className="lg:col-span-3 bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100/80 dark:border-slate-850/60 rounded-xl p-4 md:p-6 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+                          <div className="relative h-64 w-full">
+                            <svg viewBox="0 0 540 240" className="w-full h-full text-blue-500 overflow-visible" preserveAspectRatio="none">
+                              <defs>
+                                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#2563EB" stopOpacity="0.2" />
+                                  <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
+                                </linearGradient>
+                              </defs>
+                              {/* Grid lines */}
+                              <line x1="20" y1="30" x2="510" y2="30" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
+                              <line x1="20" y1="90" x2="510" y2="90" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
+                              <line x1="20" y1="150" x2="510" y2="150" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
+                              <line x1="20" y1="210" x2="510" y2="210" stroke="#E2E8F0" strokeWidth="1" className="dark:stroke-slate-800/60" strokeDasharray="3,3" />
+                              {/* Area fill */}
+                              <path d={revenueChartPoints.areaStr} fill="url(#chartGrad)" />
+                              {/* Line */}
+                              <path d={revenueChartPoints.lineStr} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                              {/* Data nodes */}
+                              {revenueChartPoints.normalized.map((p, idx) => {
+                                const cx = (idx * 70) + 20;
+                                const cy = 220 - (p * 1.8);
+                                return (
+                                  <g key={idx} className="group/node">
+                                    <title>₹{(revenueChartPoints.totals[idx] || 0).toLocaleString("en-IN")}</title>
+                                    <circle cx={cx} cy={cy} r="4.5" className="fill-white stroke-blue-600 dark:stroke-blue-500" strokeWidth="2.5" />
+                                    <circle cx={cx} cy={cy} r="12" fill="transparent" className="hover:fill-blue-500/10 cursor-pointer transition-all" />
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          </div>
+                          {/* Month labels from real data */}
+                          <div className="flex justify-between px-4 text-[9px] font-black text-slate-400 dark:text-slate-500 mt-4 uppercase tracking-wider">
+                            {revenueChartPoints.monthLabels.map(m => <span key={m}>{m}</span>)}
+                          </div>
+                        </div>
+
+                        {/* Right: Summary panel */}
+                        <div className="flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 pt-6 lg:pt-0 lg:pl-6 space-y-6">
+                          <div className="space-y-4">
+                            <div>
+                              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Collection Efficiency</span>
+                              <div className="flex items-baseline gap-2 mt-1">
+                                <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
+                                  {stats.totalFeeCollected && (stats.totalFeeCollected + (stats.totalFeeDue || 0)) > 0
+                                    ? (stats.totalFeeCollected / (stats.totalFeeCollected + (stats.totalFeeDue || 0)) * 100).toFixed(0)
+                                    : 0}%
+                                </span>
+                                <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                                  stats.totalFeeCollected && (stats.totalFeeCollected / (stats.totalFeeCollected + (stats.totalFeeDue || 0)) * 100) >= 70
+                                    ? "text-emerald-600 bg-emerald-500/10" : "text-amber-600 bg-amber-500/10"
+                                }`}>
+                                  {stats.totalFeeCollected && (stats.totalFeeCollected / (stats.totalFeeCollected + (stats.totalFeeDue || 0)) * 100) >= 70 ? "Optimal" : "Improving"}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${stats.totalFeeCollected && (stats.totalFeeCollected + (stats.totalFeeDue || 0)) > 0 ? (stats.totalFeeCollected / (stats.totalFeeCollected + (stats.totalFeeDue || 0)) * 100) : 0}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                              <div>
+                                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Gross Revenue</span>
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 block">₹{(stats.totalFeeCollected || 0).toLocaleString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Receivables</span>
+                                <span className="text-xs font-black text-rose-600 dark:text-rose-455 mt-1 block">₹{(stats.totalFeeDue || 0).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                           <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850/80 rounded-xl p-3.5 space-y-2.5">
+                            <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              <span>Paid Accounts</span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                                {(fees || []).filter(f => f && f.status === "Paid").length}
                               </span>
-                              <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded">Optimal</span>
                             </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
-                              <div 
-                                className="bg-blue-600 h-full rounded-full transition-all duration-500" 
-                                style={{ width: `${stats.totalFeeCollected && (stats.totalFeeCollected + (stats.totalFeeDue || 0)) > 0 ? (stats.totalFeeCollected / (stats.totalFeeCollected + (stats.totalFeeDue || 0)) * 100) : 0}%` }}
-                              />
+                            <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              <span>Due / Partial Accounts</span>
+                              <span className="text-rose-600 dark:text-rose-455 font-extrabold">
+                                {(fees || []).filter(f => f && (f.status === "Due" || f.status === "Partial")).length}
+                              </span>
                             </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 pt-2">
-                            <div>
-                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Gross Revenue</span>
-                              <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 block">₹{(stats.totalFeeCollected || 0).toLocaleString()}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Receivables</span>
-                              <span className="text-xs font-black text-rose-600 dark:text-rose-455 mt-1 block">₹{(stats.totalFeeDue || 0).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850/80 rounded-xl p-3.5 space-y-2.5">
-                          <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                            <span>Active Classes</span>
-                            <span className="text-slate-750 dark:text-slate-300 font-extrabold">{schedules.length}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                            <span>Faculty Count</span>
-                            <span className="text-slate-750 dark:text-slate-300 font-extrabold">{teachers.length}</span>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* SVG Day-Wise Active Schedule Workload Chart (Visually Supportive Centerpiece) */}
+                  {/* SVG Day-Wise Active Schedule Workload Chart */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 p-6 flex flex-col gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 transition-all duration-300 lg:col-span-3">
                     <div className="pb-2 border-b border-slate-100 dark:border-slate-800">
                       <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs">Workload Schedule Density</h3>
-                      <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider mt-0.5">Active hours scheduled per day</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider mt-0.5">Active hours scheduled per day — from timetable allocations</p>
                     </div>
-                    
-                    <div className="grid lg:grid-cols-4 gap-6">
-                      {/* Left: Bar Chart */}
-                      <div className="lg:col-span-3">
-                        {schedules.length === 0 ? (
-                          <div className="bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100/80 dark:border-slate-850/60 rounded-xl p-6 flex flex-col items-center justify-center min-h-[160px]">
-                            <span className="text-2xl mb-1.5">📅</span>
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No workload data</p>
-                            <p className="text-[10px] text-slate-455 text-center max-w-[180px] mt-1 font-medium">Add time slot allocations to populate density metrics</p>
-                            <button onClick={() => setTab("schedules")} className="mt-3 text-[10px] font-black text-blue-600 bg-blue-50 dark:bg-blue-950/20 px-2.5 py-1 rounded-lg hover:bg-blue-100/70 border border-blue-100/20">Set Schedule</button>
-                          </div>
-                        ) : (
+
+                    {schedules.length === 0 ? (
+                      /* Empty state — no timetable data */
+                      <div className="flex flex-col items-center justify-center py-14 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl mb-4">📅</div>
+                        <p className="text-sm font-black text-slate-700 dark:text-slate-300">No timetable data available.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1.5 max-w-xs leading-relaxed">Batch timetable slots will appear here once schedules are created.</p>
+                        <button onClick={() => setTab("schedules")} className="mt-4 text-[11px] font-black text-blue-600 bg-blue-50 dark:bg-blue-950/20 border border-blue-100/40 px-3.5 py-1.5 rounded-xl hover:bg-blue-100/70 transition-colors cursor-pointer">Set Schedule →</button>
+                      </div>
+                    ) : (
+                      <div className="grid lg:grid-cols-4 gap-6">
+                        {/* Left: Bar Chart — pixel heights, no broken % heights */}
+                        <div className="lg:col-span-3">
                           <div className="bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100/80 dark:border-slate-850/60 rounded-xl p-4 md:p-6 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-                            <div className="flex items-end justify-between h-36 px-4 md:px-8">
+                            {/* Bar area: fixed 110px tall so bars are always visible */}
+                            <div className="flex items-end justify-around gap-1" style={{ height: 110 }}>
                               {workloadChart.counts.map((count, idx) => {
                                 const day = workloadChart.daysOrder[idx].slice(0, 3);
-                                const barPercent = (count / workloadChart.maxVal) * 100;
+                                // Pixel height relative to container (110px max)
+                                const barH = workloadChart.maxVal > 0
+                                  ? Math.max(Math.round((count / workloadChart.maxVal) * 110), count > 0 ? 8 : 0)
+                                  : 0;
+                                const isActive = count > 0;
                                 return (
-                                  <div key={idx} className="flex flex-col items-center flex-1 group">
-                                    <div className="relative w-full flex justify-center">
-                                      <span className="absolute -top-7 text-[9px] font-black text-slate-750 dark:text-white opacity-0 group-hover:opacity-100 bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 px-2 py-0.5 rounded shadow-md transition-opacity z-10">
-                                        {count} classes
-                                      </span>
-                                    </div>
-                                    <div 
-                                      className="w-6 sm:w-8 bg-blue-600/90 hover:bg-blue-600 dark:bg-blue-500/80 dark:hover:bg-blue-550 rounded-t-md transition-all duration-300 cursor-pointer shadow-[0_1px_3px_rgba(37,99,235,0.1)]" 
-                                      style={{ height: `${Math.max(barPercent, 6)}%` }} 
+                                  <div key={idx} title={`${count} classes`} className="flex flex-col items-center gap-1 flex-1 cursor-pointer group">
+                                    {/* Count label — shows on hover */}
+                                    <span className={`text-[9px] font-black transition-opacity ${isActive ? 'text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100' : 'opacity-0'}`}>
+                                      {count > 0 ? count : ''}
+                                    </span>
+                                    {/* The bar itself */}
+                                    <div
+                                      className={`w-5 sm:w-7 rounded-t-md transition-all duration-300 ${
+                                        isActive
+                                          ? 'bg-blue-600/90 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-400 shadow-[0_2px_6px_rgba(37,99,235,0.25)]'
+                                          : 'bg-slate-200 dark:bg-slate-700'
+                                      }`}
+                                      style={{ height: barH || 4 }}
                                     />
-                                    <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-2 uppercase tracking-wider">{day}</span>
                                   </div>
                                 );
                               })}
                             </div>
+                            {/* Day labels below chart */}
+                            <div className="flex justify-around mt-2 px-1">
+                              {workloadChart.daysOrder.map((day, idx) => (
+                                <span key={day} className={`text-[9px] font-bold uppercase tracking-wider flex-1 text-center ${
+                                  workloadChart.counts[idx] > 0 ? 'text-slate-600 dark:text-slate-300' : 'text-slate-350 dark:text-slate-600'
+                                }`}>
+                                  {day.slice(0, 3)}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Right: Workload details */}
-                      <div className="flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 pt-6 lg:pt-0 lg:pl-6 space-y-6">
-                        <div className="space-y-4">
-                          <div>
-                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Peak Timetable Day</span>
-                            <div className="flex items-baseline gap-2 mt-1">
-                              <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                                {schedules.length > 0 ? workloadChart.daysOrder[workloadChart.counts.indexOf(workloadChart.maxVal)] : "N/A"}
+                        {/* Right: Workload details */}
+                        <div className="flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 pt-6 lg:pt-0 lg:pl-6 space-y-6">
+                          <div className="space-y-4">
+                            <div>
+                              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                                {workloadChart.peakDays.length > 1 ? "Peak Timetable Days" : "Peak Timetable Day"}
                               </span>
+                              <div className="mt-1">
+                                {workloadChart.peakDays.length === 1 ? (
+                                  /* Single peak day — show large name */
+                                  <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                                    {workloadChart.peakDays[0]}
+                                  </span>
+                                ) : (
+                                  /* Multiple days tied — list them compactly */
+                                  <div className="flex flex-wrap gap-1 mt-0.5">
+                                    {workloadChart.peakDays.map(d => (
+                                      <span key={d} className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-md">
+                                        {d.slice(0, 3)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1.5 font-bold uppercase tracking-wider">
+                                Max allocation: {workloadChart.maxVal} {workloadChart.maxVal === 1 ? "class" : "classes"}
+                                {workloadChart.peakDays.length > 1 && ` · ${workloadChart.peakDays.length} days`}
+                              </p>
                             </div>
-                            <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-wider">Max allocation: {workloadChart.maxVal} classes</p>
+
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                              <div>
+                                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Weekly Slots</span>
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 block">{schedules.length} slots</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Daily Avg</span>
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 block">{(schedules.length / 7).toFixed(1)} slots</span>
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 pt-2">
-                            <div>
-                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Weekly Slots</span>
-                              <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 block">{schedules.length} slots</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Daily Avg</span>
-                              <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-1 block">{(schedules.length / 7).toFixed(1)} slots</span>
-                            </div>
+                          <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850/80 rounded-xl p-3.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">
+                            📌 Schedule density shows active slot allocations. Keep daily distribution balanced to avoid faculty fatigue.
                           </div>
-                        </div>
-
-                        <div className="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850/80 rounded-xl p-3.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">
-                          📌 Schedule density shows active slot allocations. Keep daily distribution balanced to avoid faculty fatigue.
-                        </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
+              </div>
 
               {/* ZONE 3 - Operational Activity Area */}
-              <div className="bg-emerald-50 dark:bg-emerald-950/15 border border-emerald-200/45 dark:border-emerald-900/35 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="bg-emerald-50/60 dark:bg-emerald-950/8 border border-emerald-200/35 dark:border-emerald-900/25 rounded-3xl p-4 shadow-sm space-y-3">
                 <div className="flex justify-between items-center mb-0.5">
                   <div>
                     <h3 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Zone 3 — Operational Activities</h3>
-                    <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase mt-0.5">Bulletins, daily timetable, and dues lists</p>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold uppercase mt-0.5">Operational Snapshot & Daily Activities</p>
                   </div>
                 </div>
 
-                <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {/* Bulletins Bulletin */}
-                  <div className="bg-white/80 dark:bg-slate-900/60 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 p-5 flex flex-col justify-between shadow-sm transition-colors duration-200">
-                    <h3 className="font-black text-slate-800 dark:text-white text-xs mb-3 flex justify-between items-center">
-                      <span>Institute bulletins</span>
-                      <button onClick={() => setTab("announcements")} className="text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wide">Manage bulletins</button>
-                    </h3>
-                    {recentAnnouncements.length === 0 ? <p className="text-xs text-slate-400 font-bold">No active bulletins published</p> : (
-                      <ul className="space-y-2.5">{recentAnnouncements.map(a => (
-                        <li key={a._id} className="text-xs border-b border-slate-50 dark:border-slate-900 pb-2.5 last:border-0">
-                          <div className="flex justify-between items-center mb-1">
-                            <p className="font-black text-slate-800 dark:text-white truncate max-w-[140px]">{a.title}</p>
-                            {a.isImportant && <span className="bg-red-50 text-red-650 text-[8px] font-black px-1.5 py-0.5 rounded">CRITICAL</span>}
-                          </div>
-                          <p className="text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed text-[11px]">{a.body}</p>
-                        </li>
-                      ))}</ul>
+                <div className="grid lg:grid-cols-2 xl:grid-cols-2 gap-4">
+
+                  {/* ── CARD 1: Institute Bulletins ── */}
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 p-4 flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-slate-800 dark:text-white text-xs tracking-tight">Institute Bulletins</h3>
+                        {announcements.length > 0 && (
+                          <span className="text-[9px] font-extrabold bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100/60 dark:border-blue-800/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {announcements.length}
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => setTab("announcements")} className="text-[9px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-wide transition-colors cursor-pointer">
+                        View All →
+                      </button>
+                    </div>
+
+                    {announcements.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center text-center py-6">
+                        <span className="text-2xl mb-2 opacity-40">📢</span>
+                        <p className="text-xs font-black text-slate-500 dark:text-slate-400">No active bulletins available.</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium">Bulletins published by admin will appear here.</p>
+                      </div>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {recentAnnouncements.map(a => {
+                          const isImportant = a.isImportant;
+                          const dateStr = a.createdAt
+                            ? new Date(a.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                            : null;
+                          return (
+                            <li key={a._id} className="rounded-xl border border-slate-100 dark:border-slate-800/50 bg-slate-50/40 dark:bg-slate-900/20 px-3 py-2 hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
+                              <div className="flex justify-between items-center gap-2 mb-0.5">
+                                <p className="font-black text-slate-800 dark:text-slate-100 text-xs leading-snug truncate max-w-[72%]">{a.title}</p>
+                                <span className={`shrink-0 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                                  isImportant
+                                    ? "bg-red-50 text-red-600 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/40"
+                                    : "bg-slate-100 text-slate-500 border-slate-200/60 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                                }`}>
+                                  {isImportant ? "Critical" : "General"}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed">{a.body}</p>
+                              {dateStr && (
+                                <p className="text-[9px] text-slate-400 dark:text-slate-600 font-medium mt-1">{dateStr}</p>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
                     )}
                   </div>
 
-                  {/* Today's Classes */}
-                  <div className="bg-white/80 dark:bg-slate-900/60 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 p-5 flex flex-col justify-between shadow-sm transition-colors duration-200">
-                    <h3 className="font-black text-slate-800 dark:text-white text-xs mb-3 flex justify-between items-center">
-                      <span>Active Classes Today</span>
-                      <span className="text-[9px] bg-blue-50 dark:bg-blue-950/20 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">TODAY</span>
-                    </h3>
-                    {todayClasses.length === 0 ? <p className="text-xs text-slate-400 font-bold">No class timings active today</p> : (
-                      <ul className="space-y-2">{todayClasses.slice(0, 5).map(s => (
-                        <li key={s._id} className="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-900/50 rounded-xl px-3 py-2 border border-slate-100/30">
-                          <div>
-                            <p className="font-bold text-slate-800 dark:text-white">{s.subject}</p>
-                            <p className="text-[9px] text-slate-400 mt-0.5 font-bold uppercase tracking-wider">{s.batch?.batchName}</p>
-                          </div>
-                          <span className="font-black text-blue-600 bg-blue-50 dark:bg-blue-950/20 px-2.5 py-1 rounded-lg text-[10px]">{fmtTime(s.startTime)}</span>
-                        </li>
-                      ))}</ul>
+                  {/* ── CARD 2: Active Classes Today ── */}
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 p-4 flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-slate-800 dark:text-white text-xs tracking-tight">Active Classes Today</h3>
+                        {todayClasses.length > 0 && (
+                          <span className="text-[9px] font-extrabold bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100/60 dark:border-blue-800/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {todayClasses.length}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[9px] bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-100/40 dark:border-blue-800/30">
+                        {todayName}
+                      </span>
+                    </div>
+
+                    {todayClasses.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center text-center py-6">
+                        <span className="text-2xl mb-2 opacity-40">🏫</span>
+                        <p className="text-xs font-black text-slate-500 dark:text-slate-400">No classes scheduled today.</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium">Check the timetable for upcoming sessions.</p>
+                        <button onClick={() => setTab("schedules")} className="mt-2.5 text-[10px] font-black text-blue-600 bg-blue-50 dark:bg-blue-950/20 border border-blue-100/40 px-3 py-1 rounded-lg hover:bg-blue-100/60 transition-colors cursor-pointer">
+                          View Timetable →
+                        </button>
+                      </div>
+                    ) : (
+                      <ul className="space-y-1">
+                        {todayClasses.slice(0, 4).map(s => {
+                          const now = new Date();
+                          const [sh, sm] = (s.startTime || "00:00").split(":").map(Number);
+                          const [eh, em] = (s.endTime || "00:00").split(":").map(Number);
+                          const startMin = sh * 60 + sm;
+                          const endMin = eh * 60 + em;
+                          const nowMin = now.getHours() * 60 + now.getMinutes();
+                          const status = nowMin < startMin ? "upcoming" : nowMin <= endMin ? "live" : "completed";
+                          const statusCfg = {
+                            live:      { cls: "bg-emerald-500 text-white",                                                                                                    label: "● Live",      dot: "bg-emerald-500" },
+                            upcoming:  { cls: "bg-blue-50 text-blue-600 dark:bg-blue-950/25 dark:text-blue-400 border border-blue-100/50 dark:border-blue-800/40",           label: "Upcoming",   dot: "bg-blue-400" },
+                            completed: { cls: "bg-slate-100 text-slate-400 dark:bg-slate-800/60 dark:text-slate-500 border border-slate-200/40 dark:border-slate-700/40",    label: "Completed",  dot: "bg-slate-400" },
+                          }[status];
+                          return (
+                            <li key={s._id} className="rounded-xl border border-slate-100 dark:border-slate-800/50 bg-slate-50/40 dark:bg-slate-900/20 px-3 py-2 hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
+                              <div className="flex items-center justify-between gap-3">
+                                {/* Left: subject + batch + faculty */}
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-[13px] leading-tight truncate">{s.subject}</p>
+                                  <p className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5 truncate">{s.batch?.batchName || "—"}</p>
+                                  {s.teacher?.name && (
+                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium truncate">{s.teacher.name}</p>
+                                  )}
+                                </div>
+                                {/* Right: status badge + time */}
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap ${statusCfg.cls}`}>
+                                    {statusCfg.label}
+                                  </span>
+                                  <span className="text-[12px] font-black text-slate-700 dark:text-slate-200 tabular-nums">{fmtTime(s.startTime)}</span>
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                        {todayClasses.length > 4 && (
+                          <li className="text-center pt-1">
+                            <button onClick={() => setTab("schedules")} className="text-[10px] font-black text-slate-400 hover:text-blue-600 transition-colors cursor-pointer">
+                              +{todayClasses.length - 4} more classes →
+                            </button>
+                          </li>
+                        )}
+                      </ul>
                     )}
                   </div>
 
-                  {/* Pending Dues */}
-                  <div className="bg-white/80 dark:bg-slate-900/60 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 p-5 flex flex-col justify-between shadow-sm transition-colors duration-200 lg:col-span-2 xl:col-span-1">
-                    <h3 className="font-black text-slate-800 dark:text-white text-xs mb-3 flex justify-between items-center">
-                      <span>Outstanding balances</span>
-                      <button onClick={() => setTab("fees")} className="text-[9px] font-black text-red-600 hover:underline uppercase tracking-wide">Due Sheet</button>
-                    </h3>
-                    {pendingFees.length === 0 ? <p className="text-xs text-slate-400 font-bold">All student ledgers cleared</p> : (
-                      <ul className="space-y-2">{pendingFees.slice(0, 5).map(f => (
-                        <li key={f._id} className="flex justify-between items-center text-xs bg-red-50/20 hover:bg-red-50/40 rounded-xl px-3 py-2 border border-red-100/10">
+                  {/* ── CARD 3: Outstanding Balances ── */}
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 p-4 flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+                      <h3 className="font-black text-slate-800 dark:text-white text-xs tracking-tight">Outstanding Balances</h3>
+                      <button onClick={() => setTab("fees")} className="text-[9px] font-black text-rose-600 hover:text-rose-700 uppercase tracking-wide transition-colors cursor-pointer">
+                        View Due Sheet →
+                      </button>
+                    </div>
+
+                    {pendingFees.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center text-center py-4">
+                        <span className="text-2xl mb-2 opacity-30">✅</span>
+                        <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 leading-none tracking-tight">₹0 Outstanding</p>
+                        <p className="text-[11px] font-medium text-emerald-600/60 dark:text-emerald-600 mt-1.5">All student fees are up to date</p>
+                        <div className="mt-3 flex gap-5 text-center">
                           <div>
-                            <p className="font-bold text-slate-800 dark:text-white">{f.student?.name}</p>
-                            <p className="text-[9px] text-slate-400 mt-0.5 font-bold uppercase tracking-wider">{f.batch?.batchName}</p>
+                            <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Outstanding Accounts</p>
+                            <p className="text-sm font-black text-slate-500 dark:text-slate-400 mt-0.5">0</p>
                           </div>
-                          <span className="text-red-550 font-black text-xs">₹{f.remainingAmount}</span>
-                        </li>
-                      ))}</ul>
+                          <div className="w-px bg-slate-100 dark:bg-slate-800" />
+                          <div>
+                            <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Pending Collection</p>
+                            <p className="text-sm font-black text-slate-500 dark:text-slate-400 mt-0.5">₹0</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-3">
+                          <div className="flex-1 bg-rose-50/70 dark:bg-rose-950/15 border border-rose-100/60 dark:border-rose-900/30 rounded-xl px-3.5 py-2.5">
+                            <p className="text-[9px] font-black text-rose-400 uppercase tracking-wider">Total Outstanding</p>
+                            <p className="text-base font-black text-rose-600 dark:text-rose-400 mt-0.5">
+                              ₹{pendingFees.reduce((s, f) => s + (f.remainingAmount || 0), 0).toLocaleString("en-IN")}
+                            </p>
+                          </div>
+                          <div className="flex-1 bg-amber-50/70 dark:bg-amber-950/15 border border-amber-100/60 dark:border-amber-900/30 rounded-xl px-3.5 py-2.5">
+                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-wider">Students Pending</p>
+                            <p className="text-base font-black text-amber-600 dark:text-amber-400 mt-0.5">{pendingFees.length}</p>
+                          </div>
+                        </div>
+                        <ul className="space-y-1">
+                          {pendingFees.slice(0, 3).map(f => (
+                            <li key={f._id} className="flex justify-between items-center rounded-xl bg-red-50/20 dark:bg-red-950/10 border border-red-100/10 px-3 py-2 hover:bg-red-50/30 transition-colors">
+                              <div>
+                                <p className="text-xs font-black text-slate-800 dark:text-slate-100">{f.student?.name || "—"}</p>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{f.batch?.batchName || "—"}</p>
+                              </div>
+                              <span className="text-rose-600 dark:text-rose-400 font-black text-xs">₹{(f.remainingAmount || 0).toLocaleString("en-IN")}</span>
+                            </li>
+                          ))}
+                          {pendingFees.length > 3 && (
+                            <li className="text-center pt-1">
+                              <button onClick={() => setTab("fees")} className="text-[10px] font-black text-slate-400 hover:text-rose-600 transition-colors cursor-pointer">
+                                +{pendingFees.length - 3} more students →
+                              </button>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
                     )}
                   </div>
+
+                  {/* ── CARD 4: Pending Admissions ── */}
+                  {(() => {
+                    const pendingLeads = leads.filter(l => l.status === "Pending" || !l.status || l.status === "New");
+                    const totalLeads = leads.length;
+                    return (
+                      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 p-4 flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-black text-slate-800 dark:text-white text-xs tracking-tight">Pending Admissions</h3>
+                            {pendingLeads.length > 0 && (
+                              <span className="text-[9px] font-extrabold bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-100/60 dark:border-amber-800/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                {pendingLeads.length}
+                              </span>
+                            )}
+                          </div>
+                          <button onClick={() => setTab("leads")} className="text-[9px] font-black text-amber-600 hover:text-amber-700 uppercase tracking-wide transition-colors cursor-pointer">
+                            View Admissions →
+                          </button>
+                        </div>
+
+                        {pendingLeads.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center text-center py-4">
+                            <span className="text-xl mb-1 opacity-30">🎓</span>
+                            <p className="text-xl font-black text-slate-700 dark:text-slate-200 leading-none tracking-tight">0 Pending</p>
+                            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-1">
+                              {totalLeads > 0 ? `All ${totalLeads} leads processed` : "All leads processed"}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <div className="bg-amber-50/70 dark:bg-amber-950/15 border border-amber-100/60 dark:border-amber-900/30 rounded-xl px-3 py-2 flex items-center justify-between">
+                              <div>
+                                <p className="text-[9px] font-black text-amber-400 uppercase tracking-wider">Leads Awaiting Review</p>
+                                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">{pendingLeads.length} Pending</p>
+                              </div>
+                              <span className="text-3xl opacity-40">📋</span>
+                            </div>
+                            <ul className="space-y-1">
+                              {pendingLeads.slice(0, 3).map(l => (
+                                <li key={l._id} className="flex justify-between items-center rounded-xl bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100/10 px-3 py-2 hover:bg-amber-50/30 transition-colors">
+                                  <div>
+                                    <p className="text-xs font-black text-slate-800 dark:text-slate-100">{l.name || l.studentName || "—"}</p>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{l.course || l.interestedCourse || l.phone || "—"}</p>
+                                  </div>
+                                  <span className="text-[8px] font-extrabold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200/40 uppercase">
+                                    {l.status || "New"}
+                                  </span>
+                                </li>
+                              ))}
+                              {pendingLeads.length > 3 && (
+                                <li className="text-center pt-1">
+                                  <button onClick={() => setTab("leads")} className="text-[10px] font-black text-slate-400 hover:text-amber-600 transition-colors cursor-pointer">
+                                    +{pendingLeads.length - 3} more leads →
+                                  </button>
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                 </div>
+
+                {/* ── Operational Summary Strip ── */}
+                {(() => {
+                  const pendingLeads = leads.filter(l => l.status === "Pending" || !l.status || l.status === "New");
+                  const items = [
+                    { label: "Classes Scheduled", value: todayClasses.length, color: "text-blue-600 dark:text-blue-400" },
+                    { label: "Pending Admissions", value: pendingLeads.length, color: pendingLeads.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-500 dark:text-slate-400" },
+                    { label: "Outstanding Accounts", value: pendingFees.length, color: pendingFees.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400" },
+                    { label: "Active Bulletins", value: announcements.length, color: announcements.length > 0 ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400" },
+                  ];
+                  return (
+                    <div className="flex flex-wrap items-center bg-white/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30 rounded-2xl overflow-hidden divide-x divide-slate-100 dark:divide-slate-800/40">
+                      {items.map((item, i) => (
+                        <div key={i} className="flex-1 min-w-[100px] px-3 py-2.5 text-center">
+                          <p className={`text-xl font-black tabular-nums leading-none ${item.color}`}>{item.value}</p>
+                          <p className="text-[8px] font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
               </div>
             </div>
           )}
@@ -1032,8 +1611,8 @@ function AdminDashboardInner() {
                                     <span className="font-extrabold text-slate-800 dark:text-slate-100 truncate max-w-[150px] text-xs leading-none group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-150">
                                       {s.name}
                                     </span>
-                                    <span className="text-[9px] text-slate-380 dark:text-slate-550 font-semibold truncate tracking-widest uppercase leading-none">
-                                      #{s._id?.slice(-6).toUpperCase()}
+                                    <span className="text-[9px] text-slate-385 dark:text-slate-550 font-black truncate tracking-widest uppercase leading-none">
+                                      {s.registrationNumber || `#${s._id?.slice(-6).toUpperCase()}`}
                                     </span>
                                   </div>
                                 </div>
@@ -1046,7 +1625,11 @@ function AdminDashboardInner() {
                                 </span>
                               </td>
                               <td className="py-3.5 px-5 text-slate-550 dark:text-slate-405 text-xs font-semibold">{s.className || "—"}</td>
-                              <td className="py-3.5 px-5 text-slate-755 dark:text-slate-300 text-xs font-bold">{s.batch?.batchName || "—"}</td>
+                              <td className="py-3.5 px-5 text-slate-755 dark:text-slate-300 text-xs font-bold">
+                                {s.assignedBatches && s.assignedBatches.length > 0
+                                  ? s.assignedBatches.map(b => b.batchName).join(", ")
+                                  : s.batch?.batchName || "—"}
+                              </td>
 
                               <td className="py-3.5 px-5">
                                 <Dropdown
@@ -1056,6 +1639,25 @@ function AdminDashboardInner() {
                                     </button>
                                   }
                                 >
+                                  <DropdownItem 
+                                    onClick={() => {
+                                      setViewingStudent(s);
+                                      setIsEditingStudent(false);
+                                      setStudentNotes(s.internalNotes || "");
+                                      setEditStudentForm({
+                                        name: s.name || "",
+                                        email: s.email || "",
+                                        phone: s.phone || "",
+                                        address: s.address || "",
+                                        parentName: s.parentName || "",
+                                        parentPhone: s.parentPhone || "",
+                                        className: s.className || "",
+                                        stream: s.stream || "",
+                                      });
+                                    }}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" /> View Profile
+                                  </DropdownItem>
                                   <DropdownItem 
                                     onClick={() => deleteStudent(s._id)}
                                     className="text-red-500 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20"
@@ -1098,6 +1700,7 @@ function AdminDashboardInner() {
           )}
 
           {/* 3. OTHER MODULES TABS */}
+          {tab === "leads" && <LeadsTab token={token} leads={leads} loading={loading} onRefresh={() => fetchAll(true)} flash={flash} />}
           {tab === "teachers" && <TeachersTab teachers={teachers} batches={batches} schedules={schedules} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
           {tab === "batches" && <BatchesTab batches={batches} teachers={teachers} courses={courses} students={students} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
           {tab === "schedules" && <SchedulesTab schedules={schedules} batches={batches} teachers={teachers} token={token} onRefresh={() => fetchAll(true)} flash={flash} />}
@@ -1430,6 +2033,157 @@ function AdminDashboardInner() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Student Profile Modal — matches HTML reference exactly */}
+          {viewingStudent && editStudentForm && (
+            <AnimatePresence>
+              <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.4)", zIndex: 50, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "2rem 1rem", backdropFilter: "blur(4px)", overflowY: "auto" }}>
+                <motion.div
+                  initial={{ y: 15, opacity: 0, scale: 0.99 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 15, opacity: 0, scale: 0.99 }}
+                  style={{ background: "#FFFFFF", border: "0.5px solid #E2E5EA", borderRadius: 16, width: "100%", maxWidth: 500, margin: "auto" }}
+                >
+                  {renderProfileModalContent()}
+                  {/* Footer */}
+                  {isEditingStudent ? (
+                    <div style={{ padding: "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, borderTop: "0.5px solid #E2E5EA" }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingStudent(false)}
+                        style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontWeight: 500, border: "0.5px solid #D1D5DB", background: "transparent", color: "#374151" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => { await handleSaveStudent(viewingStudent._id, editStudentForm); setIsEditingStudent(false); }}
+                        disabled={actionLoading}
+                        style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontWeight: 500, background: "#185FA5", color: "#fff", border: "none", display: "flex", alignItems: "center", gap: 6, opacity: actionLoading ? 0.7 : 1 }}
+                      >
+                        {actionLoading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                        Save student
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "0.5px solid #E2E5EA" }}>
+                      <button
+                        type="button"
+                        onClick={() => { setViewingStudent(null); setIsEditingStudent(false); }}
+                        style={{ fontSize: 12, padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontWeight: 500, border: "0.5px solid #D1D5DB", background: "transparent", color: "#6B7280", display: "flex", alignItems: "center", gap: 5 }}
+                      >
+                        <X style={{ width: 14, height: 14 }} /> Close
+                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentBatchIds = (viewingStudent?.assignedBatches || []).map(b => b ? (b._id || b) : null).filter(Boolean);
+                            setAssignedBatchesForm(currentBatchIds);
+                            setShowBatchAssignModal(true);
+                          }}
+                          style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontWeight: 500, border: "0.5px solid #D1D5DB", background: "transparent", color: "#374151", display: "flex", alignItems: "center", gap: 5 }}
+                        >
+                          <LayoutGrid style={{ width: 14, height: 14 }} /> Assign batches
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingStudent(true)}
+                          style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontWeight: 500, background: "#185FA5", color: "#fff", border: "none", display: "flex", alignItems: "center", gap: 5 }}
+                        >
+                          <Edit2 style={{ width: 14, height: 14 }} /> Edit student
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </div>
+            </AnimatePresence>
+          )}
+
+          {/* Quick Batch Assignment Modal */}
+          {showBatchAssignModal && viewingStudent && (
+            <FormModal
+              title={`Assign Batches — ${viewingStudent.name}`}
+              onClose={() => setShowBatchAssignModal(false)}
+              onSubmit={async () => {
+                setActionLoading(true);
+                try {
+                  const res = await fetch(`${API}/api/admin/students/${viewingStudent._id}/batches`, {
+                    method: "PUT",
+                    headers: JH,
+                    body: JSON.stringify({ batchIds: assignedBatchesForm }),
+                  });
+                  if (res.ok) {
+                    flash("✅ Batch assignments updated!");
+                    setShowBatchAssignModal(false);
+                    fetchAll(true);
+                    const data = await res.json();
+                    setViewingStudent(data.student);
+                  } else {
+                    const d = await res.json();
+                    flash(`❌ ${d.message || "Failed to assign batches"}`);
+                  }
+                } catch {
+                  flash("❌ Connection error");
+                }
+                setActionLoading(false);
+              }}
+              submitLabel={actionLoading ? "Saving..." : "Save Assignments"}
+              disabled={actionLoading}
+            >
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                  Select active batches to assign to this student:
+                </p>
+                
+                <div className="grid gap-2 text-xs">
+                  {batches.map((b) => {
+                    const isChecked = assignedBatchesForm.includes(b._id);
+                    return (
+                      <label 
+                        key={b._id} 
+                        className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                          isChecked 
+                            ? "bg-blue-50/60 dark:bg-blue-950/20 border-blue-500 text-blue-800 dark:text-blue-350 font-black shadow-sm" 
+                            : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setAssignedBatchesForm([...assignedBatchesForm, b._id]);
+                              } else {
+                                setAssignedBatchesForm(assignedBatchesForm.filter(id => id !== b._id));
+                              }
+                            }}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-extrabold text-sm block">{b.batchName}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+                              {b.timing || "No Timing Info"} • {b.course?.title || "No Course"}
+                            </span>
+                          </div>
+                        </div>
+                        {isChecked && (
+                          <span className="bg-blue-100/50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-350 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border border-blue-200/30">
+                            Assigned
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                  {batches.length === 0 && (
+                    <div className="text-center py-6 text-slate-400 font-bold">No batches created in system yet</div>
+                  )}
+                </div>
+              </div>
+            </FormModal>
           )}
 
         </main>
