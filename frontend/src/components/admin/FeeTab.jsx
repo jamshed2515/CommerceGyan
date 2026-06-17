@@ -17,6 +17,10 @@ import {
 import API from "@/config/api";
 
 const statusCls = { 
+  "GOOD STANDING": "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30",
+  "PARTIALLY PAID": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
+  "DUE THIS MONTH": "bg-red-50 text-red-655 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
+  "OVERDUE": "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60 font-black",
   Paid: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30", 
   Partial: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30", 
   Due: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30" 

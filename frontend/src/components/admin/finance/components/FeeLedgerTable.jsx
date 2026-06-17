@@ -5,9 +5,7 @@ import { Dropdown, DropdownItem } from "../../AdminUI";
 const statusCls = {
   Paid: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30",
   Partial: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
-  Due: "bg-red-50 text-red-650 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
-  Overdue: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60 font-black",
-  Upcoming: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30",
+  Due: "bg-red-50 text-red-655 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
 };
 
 export default function FeeLedgerTable({
@@ -92,14 +90,27 @@ export default function FeeLedgerTable({
                   ₹{(f.remainingAmount || 0).toLocaleString("en-IN")}
                 </td>
                 <td className="py-3.5 px-4">
-                  <span
-                    className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border ${
-                      statusCls[f.status] ||
-                      "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    {f.status}
-                  </span>
+                  {(() => {
+                    const paid = f.paidAmount || 0;
+                    const due = f.remainingAmount || 0;
+                    let displayStatus = "Due";
+                    if (due === 0) {
+                      displayStatus = "Paid";
+                    } else if (paid > 0 && due > 0) {
+                      displayStatus = "Partial";
+                    }
+
+                    return (
+                      <span
+                        className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                          statusCls[displayStatus] ||
+                          "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        {displayStatus}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/50 dark:group-hover:bg-slate-800/40 py-3.5 px-4 text-right z-10 shadow-[-8px_0_8px_-6px_rgba(0,0,0,0.06)] transition-colors">
                   <div className="inline-block text-left">
@@ -120,18 +131,6 @@ export default function FeeLedgerTable({
                       <DropdownItem onClick={() => onRecordPayment(f)}>
                         <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Add Payment
                       </DropdownItem>
-                      {f.payments && f.payments.length > 0 && (
-                        <DropdownItem
-                          onClick={() => {
-                            onGenerateReceipt(f, f.payments[f.payments.length - 1]);
-                            setTimeout(() => {
-                              window.print();
-                            }, 500);
-                          }}
-                        >
-                          <Printer className="w-3.5 h-3.5 text-blue-500" /> Download Receipt
-                        </DropdownItem>
-                      )}
                       <DropdownItem
                         onClick={() => onDeleteLedger(f._id)}
                         className="text-red-500 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20"

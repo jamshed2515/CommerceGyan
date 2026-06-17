@@ -6,7 +6,7 @@ const MonthlyFeeStatement = require("../models/MonthlyFeeStatement");
 const FeePayment = require("../models/FeePayment");
 const Receipt = require("../models/Receipt");
 const Enrollment = require("../models/Enrollment");
-const { autoGenerateStatementsForLedger } = require("../utils/feeHelpers");
+const { autoGenerateStatementsForLedger, generateReceiptNumber } = require("../utils/feeHelpers");
 
 const router = express.Router();
 
@@ -245,8 +245,7 @@ router.post("/", authMiddleware, adminMiddleware, async (req, res) => {
       await payment.save();
       initialPayment = payment;
 
-      const yPrefix = new Date().getFullYear().toString().slice(-2);
-      const rNumber = `REC${yPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const rNumber = await generateReceiptNumber(payment.date || new Date());
 
       const receipt = new Receipt({
         receiptNo: rNumber,
@@ -325,19 +324,8 @@ router.post("/:id/monthly-bills", authMiddleware, adminMiddleware, async (req, r
     });
     await statement.save();
 
-    // Recalculate ledger status
-    const allStatements = await MonthlyFeeStatement.find({ ledger: ledger._id });
-    const allPaid = allStatements.every((s) => s.status === "Paid");
-    const anyPaidOrPartial = allStatements.some((s) => s.paidAmount > 0);
-
-    if (allPaid) {
-      ledger.status = "Paid";
-    } else if (anyPaidOrPartial) {
-      ledger.status = "Partial";
-    } else {
-      ledger.status = "Due";
-    }
-    await ledger.save();
+    // Recalculate overall status using autoGenerateStatementsForLedger helper
+    await autoGenerateStatementsForLedger(ledger);
 
     const populatedLedger = await FeeLedger.findById(ledger._id)
       .populate("student", "name email phone registrationNumber className stream")
@@ -370,7 +358,7 @@ router.post("/:id/monthly-bills", authMiddleware, adminMiddleware, async (req, r
 // POST record fee payment (admin only)
 router.post("/:id/payments", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { amount, mode, date, reference, remarks, month } = req.body;
+    const { amount, mode, date, reference, remarks, month, collectedBy } = req.body;
     if (!amount || !mode || !month) {
       return res.status(400).json({ message: "amount, mode, and month are required" });
     }
@@ -400,31 +388,29 @@ router.post("/:id/payments", authMiddleware, adminMiddleware, async (req, res) =
       date: date ? new Date(date) : new Date(),
       reference: reference || "",
       remarks: remarks || `Payment applied for ${month}.`,
-      collectedBy: "Admin",
+      collectedBy: collectedBy || "Admin",
     });
     await payment.save();
 
-    // 2. Update statement paidAmount
+    // 2. Update statement paidAmount, pendingAmount, status
     statement.paidAmount += payAmount;
+    statement.pendingAmount = Math.max(0, statement.dueAmount - statement.paidAmount);
+    if (statement.pendingAmount === 0) {
+      statement.status = "Paid";
+    } else if (statement.paidAmount > 0) {
+      statement.status = "Partial";
+    } else {
+      statement.status = "Due";
+    }
     await statement.save();
 
     // 3. Update overall ledger status
-    const allStatements = await MonthlyFeeStatement.find({ ledger: ledger._id });
-    const allPaid = allStatements.every((s) => s.status === "Paid");
-    const anyPaidOrPartial = allStatements.some((s) => s.paidAmount > 0);
+    await autoGenerateStatementsForLedger(ledger);
 
-    if (allPaid) {
-      ledger.status = "Paid";
-    } else if (anyPaidOrPartial) {
-      ledger.status = "Partial";
-    } else {
-      ledger.status = "Due";
-    }
-    await ledger.save();
+    const allStatements = await MonthlyFeeStatement.find({ ledger: ledger._id });
 
     // 4. Create Receipt
-    const yPrefix = new Date(payment.date).getFullYear().toString().slice(-2);
-    const rNumber = `REC${yPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const rNumber = await generateReceiptNumber(payment.date);
 
     const totalPendingAmount = allStatements.reduce((sum, s) => sum + s.pendingAmount, 0);
 
@@ -483,6 +469,7 @@ router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
 
     ledger.netMonthlyFee = Math.max(0, ledger.monthlyFee - ledger.discount);
     await ledger.save();
+    await autoGenerateStatementsForLedger(ledger);
 
     const populatedLedger = await FeeLedger.findById(ledger._id)
       .populate("student", "name email phone registrationNumber className stream")
@@ -538,6 +525,57 @@ router.get("/receipts/:paymentId", authMiddleware, async (req, res) => {
     res.json(receipt);
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// GET specific receipt as PDF using server-side Puppeteer
+router.get("/receipts/:paymentId/pdf", authMiddleware, async (req, res) => {
+  try {
+    const receipt = await Receipt.findOne({ payment: req.params.paymentId })
+      .populate("student", "name registrationNumber email className stream")
+      .populate("course", "title");
+
+    if (!receipt) {
+      return res.status(404).json({ message: "Receipt not found" });
+    }
+
+    const payment = await FeePayment.findById(req.params.paymentId);
+    const ledgerDoc = await FeeLedger.findOne({ student: receipt.student._id, course: receipt.course._id });
+
+    if (!ledgerDoc) {
+      return res.status(404).json({ message: "Fee ledger not found" });
+    }
+
+    await autoGenerateStatementsForLedger(ledgerDoc);
+    const statements = await MonthlyFeeStatement.find({ ledger: ledgerDoc._id }).sort({ dueDate: 1 });
+    const payments = await FeePayment.find({ ledger: ledgerDoc._id }).populate("statement").sort({ date: -1 });
+
+    const totalFees = statements.reduce((sum, s) => sum + s.dueAmount, 0);
+    const paidAmount = statements.reduce((sum, s) => sum + s.paidAmount, 0);
+    const remainingAmount = statements.reduce((sum, s) => sum + s.pendingAmount, 0);
+    const discount = ledgerDoc.discount || 0;
+    const netFee = totalFees - discount;
+
+    const ledger = {
+      ...ledgerDoc.toObject(),
+      totalFees,
+      paidAmount,
+      remainingAmount,
+      discount,
+      netFee,
+      monthlyBills: statements,
+      payments,
+    };
+
+    const pdfGenerator = require("../utils/pdfGenerator");
+    const pdfBuffer = await pdfGenerator.generateReceiptPDF(receipt, ledger, payment);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=Receipt-${receipt.receiptNo}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("[PDF Route] failed:", err);
+    res.status(500).json({ message: "Server error generating PDF", error: err.message });
   }
 });
 

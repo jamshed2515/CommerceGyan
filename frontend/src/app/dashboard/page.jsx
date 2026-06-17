@@ -7,10 +7,13 @@ import { validateSession, clearSession, getStoredToken } from "@/lib/auth";
 import ReceiptGenerator from "@/components/admin/finance/components/ReceiptGenerator";
 
 const statusCls = {
+  "GOOD STANDING": "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30",
+  "PARTIALLY PAID": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
+  "DUE THIS MONTH": "bg-red-50 text-red-655 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
+  "OVERDUE": "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60 font-black",
   Paid: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30",
   Partial: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
-  Due: "bg-red-50 text-red-650 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
-  Overdue: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60 font-black",
+  Due: "bg-red-50 text-red-655 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
   Upcoming: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30",
 };
 
@@ -783,7 +786,19 @@ export default function StudentDashboard() {
                                       {p.reference || p.remarks || "—"}
                                     </td>
                                     <td className="py-2.5 px-3 text-gray-550 font-medium">
-                                      {p.collectedBy || "Online"}
+                                      {(() => {
+                                        const cb = p.collectedBy || (p.mode === "Razorpay" ? "Online Payment Gateway" : "Admin");
+                                        if (cb === "Online Payment Gateway" || cb === "Online") {
+                                          return "Online";
+                                        }
+                                        if (cb === "Admin") {
+                                          return "Admin Recorded";
+                                        }
+                                        if (cb === "Super Admin") {
+                                          return "Staff Recorded";
+                                        }
+                                        return cb;
+                                      })()}
                                     </td>
                                     <td className="py-2.5 px-3">
                                       <button

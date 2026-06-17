@@ -11,8 +11,8 @@ const feeLedgerSchema = new mongoose.Schema(
     billingCycle: { type: String, default: "monthly" },
     status: {
       type: String,
-      enum: ["Paid", "Partial", "Due"],
-      default: "Due",
+      enum: ["GOOD STANDING", "PARTIALLY PAID", "DUE THIS MONTH", "OVERDUE", "Paid", "Partial", "Due"],
+      default: "DUE THIS MONTH",
     },
     notes: { type: String, default: "" },
   },

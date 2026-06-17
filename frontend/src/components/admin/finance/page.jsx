@@ -43,6 +43,8 @@ export default function FeeTab({ fees, students, batches, courses, token, onRefr
     handleCreateLedger,
     handleUpdateLedger,
     handleAddMonthlyBill,
+    handleStartRecordPayment,
+    handleCloseRecordPayment,
     handleRecordPayment,
     handleDeleteLedger,
   } = useFeeLedger({ fees, token, onRefresh, flash });
@@ -225,14 +227,7 @@ export default function FeeTab({ fees, students, batches, courses, token, onRefr
         <FeeLedgerTable
           fees={filteredFees}
           onViewLedger={setViewingLedger}
-          onRecordPayment={(ledgerRecord, preselectedMonth) => {
-            setRecordingPaymentLedger(ledgerRecord);
-            setPaymentForm((prev) => ({
-              ...prev,
-              amount: "",
-              month: preselectedMonth || "",
-            }));
-          }}
+          onRecordPayment={handleStartRecordPayment}
           onEditLedger={setEditingLedger}
           onGenerateReceipt={(ledgerRecord, pRecord) => {
             setPrintingReceipt({ ledger: ledgerRecord, payment: pRecord });
@@ -511,7 +506,7 @@ export default function FeeTab({ fees, students, batches, courses, token, onRefr
           form={paymentForm}
           setForm={setPaymentForm}
           onSubmit={() => handleRecordPayment(recordingPaymentLedger._id)}
-          onClose={() => setRecordingPaymentLedger(null)}
+          onClose={handleCloseRecordPayment}
           loading={saving}
         />
       )}
@@ -524,14 +519,7 @@ export default function FeeTab({ fees, students, batches, courses, token, onRefr
           onPrintReceipt={(ledgerRecord, pRecord) => {
             setPrintingReceipt({ ledger: ledgerRecord, payment: pRecord });
           }}
-          onRecordPayment={(ledgerRecord, preselectedMonth) => {
-            setRecordingPaymentLedger(ledgerRecord);
-            setPaymentForm((prev) => ({
-              ...prev,
-              amount: "",
-              month: preselectedMonth || "",
-            }));
-          }}
+          onRecordPayment={handleStartRecordPayment}
           onAddMonthlyBill={(data) => handleAddMonthlyBill(viewingLedger._id, data)}
           onEditLedger={setEditingLedger}
         />
@@ -542,6 +530,7 @@ export default function FeeTab({ fees, students, batches, courses, token, onRefr
         <ReceiptGenerator
           ledger={printingReceipt.ledger}
           payment={printingReceipt.payment}
+          token={token}
           onClose={() => setPrintingReceipt(null)}
         />
       )}

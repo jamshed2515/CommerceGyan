@@ -5,6 +5,7 @@ const Payment = require("../models/Payment");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");
+const { generateReceiptNumber } = require("../utils/feeHelpers");
 
 const router = express.Router();
 
@@ -93,7 +94,7 @@ router.post("/verify", authMiddleware, async (req, res) => {
             date: new Date(),
             reference: razorpay_payment_id || updatedPayment.razorpayOrderId,
             remarks: `Online Payment (Razorpay) for ${updatedPayment.month}.`,
-            collectedBy: "Online",
+            collectedBy: "Online Payment Gateway",
           });
           await feePayment.save();
 
@@ -124,8 +125,7 @@ router.post("/verify", authMiddleware, async (req, res) => {
           await ledger.save();
 
           // 4. Create printable digital Receipt
-          const yPrefix = new Date().getFullYear().toString().slice(-2);
-          const rNumber = `REC${yPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          const rNumber = await generateReceiptNumber(feePayment.date || new Date());
           const totalPendingAmount = allStatements.reduce((sum, s) => sum + s.pendingAmount, 0);
 
           const receipt = new Receipt({

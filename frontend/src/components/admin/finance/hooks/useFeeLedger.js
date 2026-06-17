@@ -12,6 +12,7 @@ export default function useFeeLedger({ fees, token, onRefresh, flash }) {
   const [recordingPaymentLedger, setRecordingPaymentLedger] = useState(null);
   const [viewingLedger, setViewingLedger] = useState(null);
   const [printingReceipt, setPrintingReceipt] = useState(null);
+  const [reopenLedgerAfterPayment, setReopenLedgerAfterPayment] = useState(null);
 
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -35,6 +36,7 @@ export default function useFeeLedger({ fees, token, onRefresh, flash }) {
     reference: "",
     remarks: "",
     month: "",
+    collectedBy: "Admin",
   });
 
   // Derived filtered fees
@@ -126,6 +128,34 @@ export default function useFeeLedger({ fees, token, onRefresh, flash }) {
     }
   };
 
+  const handleStartRecordPayment = (ledgerRecord, preselectedMonth) => {
+    if (viewingLedger) {
+      setReopenLedgerAfterPayment(viewingLedger);
+      setViewingLedger(null);
+    } else {
+      setReopenLedgerAfterPayment(null);
+    }
+    setRecordingPaymentLedger(ledgerRecord);
+    setPaymentForm((prev) => ({
+      ...prev,
+      amount: "",
+      month: preselectedMonth || "",
+      mode: "Cash",
+      date: new Date().toISOString().split("T")[0],
+      reference: "",
+      remarks: "",
+      collectedBy: "Admin",
+    }));
+  };
+
+  const handleCloseRecordPayment = () => {
+    setRecordingPaymentLedger(null);
+    if (reopenLedgerAfterPayment) {
+      setViewingLedger(reopenLedgerAfterPayment);
+      setReopenLedgerAfterPayment(null);
+    }
+  };
+
   const handleRecordPayment = async (id) => {
     if (!paymentForm.amount || !paymentForm.mode) {
       flash("❌ Payment Amount and Mode are required");
@@ -140,12 +170,16 @@ export default function useFeeLedger({ fees, token, onRefresh, flash }) {
         reference: paymentForm.reference,
         remarks: paymentForm.remarks,
         month: paymentForm.month || undefined,
+        collectedBy: paymentForm.collectedBy || "Admin",
       });
       flash("✅ Payment recorded successfully!");
       setRecordingPaymentLedger(null);
       
-      // If we are currently viewing the ledger, update the viewing state to reflect the new payment history!
-      if (viewingLedger && viewingLedger._id === id) {
+      // If we are currently viewing the ledger, or need to reopen it, update the viewing state to reflect the new payment history!
+      if (reopenLedgerAfterPayment && reopenLedgerAfterPayment._id === id) {
+        setViewingLedger(res.fee);
+        setReopenLedgerAfterPayment(null);
+      } else if (viewingLedger && viewingLedger._id === id) {
         setViewingLedger(res.fee);
       }
       
@@ -156,6 +190,7 @@ export default function useFeeLedger({ fees, token, onRefresh, flash }) {
         reference: "",
         remarks: "",
         month: "",
+        collectedBy: "Admin",
       });
       onRefresh();
     } catch (err) {
@@ -205,6 +240,8 @@ export default function useFeeLedger({ fees, token, onRefresh, flash }) {
     handleCreateLedger,
     handleUpdateLedger,
     handleAddMonthlyBill,
+    handleStartRecordPayment,
+    handleCloseRecordPayment,
     handleRecordPayment,
     handleDeleteLedger,
   };

@@ -56,14 +56,59 @@ const autoGenerateStatementsForLedger = async (ledger) => {
     // Recalculate ledger status based on all statements
     const allStatements = await MonthlyFeeStatement.find({ ledger: ledger._id });
     if (allStatements.length > 0) {
-      const allPaid = allStatements.every((s) => s.status === "Paid");
-      const anyPaidOrPartial = allStatements.some((s) => s.paidAmount > 0);
-      
-      let newStatus = "Due";
-      if (allPaid) {
-        newStatus = "Paid";
-      } else if (anyPaidOrPartial) {
-        newStatus = "Partial";
+      const now = new Date();
+      const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const parseMonthStr = (monthStr) => {
+        const parts = monthStr.split(" ");
+        if (parts.length === 2) {
+          const monthNames = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+          ];
+          const mIdx = monthNames.indexOf(parts[0]);
+          const year = parseInt(parts[1], 10);
+          if (mIdx !== -1 && !isNaN(year)) {
+            return new Date(year, mIdx, 1);
+          }
+        }
+        return new Date();
+      };
+
+      let hasOverduePrevious = false;
+      let currentMonthStmt = null;
+
+      allStatements.forEach((s) => {
+        const sDate = parseMonthStr(s.month);
+        if (sDate < currentMonthDate) {
+          if (s.pendingAmount > 0) {
+            hasOverduePrevious = true;
+          }
+        } else if (sDate.getTime() === currentMonthDate.getTime()) {
+          currentMonthStmt = s;
+        }
+      });
+
+      let newStatus = "GOOD STANDING";
+
+      if (hasOverduePrevious) {
+        newStatus = "OVERDUE";
+      } else if (currentMonthStmt) {
+        if (currentMonthStmt.pendingAmount === 0) {
+          newStatus = "GOOD STANDING";
+        } else if (currentMonthStmt.paidAmount > 0) {
+          newStatus = "PARTIALLY PAID";
+        } else {
+          newStatus = "DUE THIS MONTH";
+        }
+      } else {
+        const pastStmts = allStatements.filter(s => parseMonthStr(s.month) < currentMonthDate);
+        if (pastStmts.length > 0) {
+          const allPastPaid = pastStmts.every(s => s.pendingAmount === 0);
+          newStatus = allPastPaid ? "GOOD STANDING" : "OVERDUE";
+        } else {
+          newStatus = "GOOD STANDING";
+        }
       }
 
       if (ledger.status !== newStatus) {
@@ -76,6 +121,23 @@ const autoGenerateStatementsForLedger = async (ledger) => {
   }
 };
 
+const Counter = require("../models/Counter");
+
+const generateReceiptNumber = async (date = new Date()) => {
+  const year = new Date(date).getFullYear();
+  const sequenceName = `receipt_${year}`;
+  
+  const counter = await Counter.findByIdAndUpdate(
+    sequenceName,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  
+  const paddedSeq = String(counter.seq).padStart(6, "0");
+  return `CG-REC-${year}-${paddedSeq}`;
+};
+
 module.exports = {
   autoGenerateStatementsForLedger,
+  generateReceiptNumber,
 };
